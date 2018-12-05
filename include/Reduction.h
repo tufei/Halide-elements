@@ -12,7 +12,7 @@ namespace Element {
 //
 namespace {
 using namespace Halide::Internal;
-class FindFreeVars : public IRMutator {
+class FindFreeVars : public IRMutator2 {
 public:
     std::vector<Var> free_vars;
     std::vector<Expr> call_args;
@@ -23,8 +23,9 @@ public:
 private:
     Scope<int> internal;
 
-    using IRMutator::visit;
+    using IRMutator2::visit;
 
+#if 0
     void visit(const Let *op) {
         Expr value = mutate(op->value);
         internal.push(op->name, 0);
@@ -73,6 +74,7 @@ private:
         free_vars.push_back(Var(var_name));
         call_args.push_back(v);
     }
+#endif
 };
 
 Expr sum_unroll(RDom r, Expr e, const std::string& name = "sum_unroll") {
