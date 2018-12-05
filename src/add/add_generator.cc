@@ -9,22 +9,23 @@ class Add : public Halide::Generator<Add<T>> {
 public:
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    GeneratorInput<Buffer<T>> src0{"src0", 2};
-    GeneratorInput<Buffer<T>> src1{"src1", 2};
+    GeneratorInput<Buffer<T>> src0{"src0", 3};
+    GeneratorInput<Buffer<T>> src1{"src1", 3};
 
-    GeneratorOutput<Buffer<T>> dst{"dst", 2};
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-    Var x, y;
+    Var x, y, c;
 
     void generate() {
       using upper_t = typename Halide::Element::Upper<T>::type;
 
-      Expr srcval0 = cast<upper_t>(src0(x, y));
-      Expr srcval1 = cast<upper_t>(src1(x, y));
+      Expr srcval0 = cast<upper_t>(src0(x, y, c));
+      Expr srcval1 = cast<upper_t>(src1(x, y, c));
       Expr dstval = min(srcval0 + srcval1, cast<upper_t>(type_of<T>().max()));
 
-      dst(x, y) = cast<T>(dstval);
+      dst(x, y, c) = cast<T>(dstval);
 
       dst.vectorize(x, 16).parallel(y);
     }
