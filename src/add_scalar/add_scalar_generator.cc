@@ -1,30 +1,32 @@
-#include <iostream>
+#include <cstdint>
 #include <limits>
 #include "Halide.h"
-
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
 
 template<typename T>
 class AddScalar : public Halide::Generator<AddScalar<T>> {
-    ImageParam src{type_of<T>(), 2, "src"};
-    Param<double> value{"value", 1};
+public:
+    GeneratorInput<Buffer<T>> src{"src", 3};
+
+    GeneratorInput<double> value{"value"};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-public:
-    Func build() {
-        Func dst{"dst"};
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-        dst = Element::add_scalar<T>(src, value);
+    Var x, y, c;
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
+    void generate() {
+      Expr dstval = clamp(round(cast<double>(src(x, y, c)) + value), 0,
+                          cast<double>(type_of<T>().max()));
 
-        return dst;
+      dst(x, y, c) = cast<T>(dstval);
+
+      dst.vectorize(x, 16).parallel(y);
     }
 };
 
