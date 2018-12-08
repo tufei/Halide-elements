@@ -26,7 +26,7 @@ public:
 
       dst(x, y, c) = cast<T>(dstval);
 
-      dst.vectorize(x, 16).parallel(y);
+      dst.vectorize(x, Halide::Internal::GeneratorBase::natural_vector_size(dst.type())).parallel(y);
     }
 };
 
