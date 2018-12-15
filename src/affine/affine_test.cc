@@ -17,9 +17,10 @@ int main()
         //
         // Run
         //
+        const int depth = 3;
         const int width = 768;
         const int height = 1280;
-        const std::vector<int32_t> extents{width, height};
+        const std::vector<int32_t> extents{width, height, depth};
         auto input = mk_rand_buffer<uint8_t>(extents);
         auto output = mk_null_buffer<uint8_t>(extents);
 
@@ -48,19 +49,21 @@ int main()
         float a11 =   scale_x * (cos_deg - sin_deg * tan_skew_y);
         float a21 = - (a01 * shift_x + a11 * shift_y);
 
-        for (int y=shift_y; y<height; ++y) {
-            for (int x=shift_x; x<width; ++x) {
-                int tx = static_cast<int>((a00*x + a10*y + a20) / det);
-                int ty = static_cast<int>((a01*x + a11*y + a21) / det);
+        for (int c=0; c<depth; ++c) {
+            for (int y=shift_y; y<height; ++y) {
+                for (int x=shift_x; x<width; ++x) {
+                    int tx = static_cast<int>((a00*x + a10*y + a20) / det);
+                    int ty = static_cast<int>((a01*x + a11*y + a21) / det);
 
-                uint8_t expect = 255;
-                if (tx >= 0 && tx < width && ty >= 0 && ty < height)
-                    expect = input(tx, ty);
-                uint8_t actual = output(x, y);
-                if (expect != actual) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                    x, y, static_cast<uint64_t>(expect),
-                                                    x, y, static_cast<uint64_t>(actual)).c_str());
+                    uint8_t expect = 255;
+                    if (tx >= 0 && tx < width && ty >= 0 && ty < height)
+                        expect = input(tx, ty, c);
+                    uint8_t actual = output(x, y, c);
+                    if (expect != actual) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                        x, y, c, static_cast<uint64_t>(expect),
+                                                        x, y, c, static_cast<uint64_t>(actual)).c_str());
+                    }
                 }
             }
         }

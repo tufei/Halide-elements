@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     float skew_x  = atof(argv[7]);
 
     Halide::Runtime::Buffer<uint8_t> input = Halide::Tools::load_image(in_fname.c_str());
-    Halide::Runtime::Buffer<uint8_t> output(input.width(), input.height());
+    Halide::Runtime::Buffer<uint8_t> output(input.width(), input.height(), input.channels());
 
     affine(input, degrees, scale_x, scale_y, shift_x, shift_y, skew_x, output);
 
