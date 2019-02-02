@@ -39,6 +39,24 @@ Func& schedule(Func& f, const std::vector<int32_t>& mins, const std::vector<int3
     return f;
 }
 
+template<typename T>
+Func& schedule(GeneratorInput<T>& gi, const std::vector<int32_t>& shape)
+{
+    Func f(lambda(_, gi(_)));
+
+    const std::vector<int32_t> mins(shape.size(), 0);
+    return schedule(f, mins, shape);
+}
+
+template<typename T>
+Func& schedule(GeneratorOutput<T>& go, const std::vector<int32_t>& shape)
+{
+    Func f(lambda(_, go(_)));
+
+    const std::vector<int32_t> mins(shape.size(), 0);
+    return schedule(f, mins, shape);
+}
+
 ImageParam& schedule(ImageParam& ip, const std::vector<int32_t>& shape)
 {
     const std::vector<int32_t> mins(shape.size(), 0);

@@ -5,78 +5,78 @@ using namespace Halide;
 using namespace Halide::Element;
 
 class AlexnetXNOR : public Halide::Generator<AlexnetXNOR> {
-    Var x{"x"}, y{"y"}, c{"c"}, n{"n"}, i{"i"};
+public:
+    GeneratorInput<Buffer<int32_t>> in{"in", 4};
+
+    GeneratorInput<Buffer<int32_t>> conv1_weight{"conv1_weight", 4};
+    GeneratorInput<Buffer<int32_t>> conv1_bias{"conv1_bias", 1};
+    GeneratorInput<Buffer<int32_t>> bn1_mean{"bn1_mean", 1};
+    GeneratorInput<Buffer<int32_t>> bn1_variance{"bn1_variance", 1};
+    GeneratorInput<Buffer<int32_t>> scale1_weight{"scale1_mean", 1};
+    GeneratorInput<Buffer<int32_t>> scale1_bias{"scale1_variance", 1};
+
+    GeneratorInput<Buffer<int32_t>> bn2_mean{"bn2_mean", 1};
+    GeneratorInput<Buffer<int32_t>> bn2_variance{"bn2_variance", 1};
+    GeneratorInput<Buffer<int32_t>> scale2_weight{"scale2_mean", 1};
+    GeneratorInput<Buffer<int32_t>> scale2_bias{"scale2_variance", 1};
+    GeneratorInput<Buffer<bool>> conv2_weight{"conv2_weight", 4};
+    GeneratorInput<Buffer<int32_t>> conv2_alpha{"conv2_alpha", 1};
+    GeneratorInput<Buffer<int32_t>> conv2_bias{"conv2_bias", 1};
+
+    GeneratorInput<Buffer<int32_t>> bn3_mean{"bn3_mean", 1};
+    GeneratorInput<Buffer<int32_t>> bn3_variance{"bn3_variance", 1};
+    GeneratorInput<Buffer<int32_t>> scale3_weight{"scale3_weight", 1};
+    GeneratorInput<Buffer<int32_t>> scale3_bias{"scale3_bias", 1};
+    GeneratorInput<Buffer<bool>> conv3_weight{"conv3_weight", 4};
+    GeneratorInput<Buffer<int32_t>> conv3_alpha{"conv3_alpha", 1};
+    GeneratorInput<Buffer<int32_t>> conv3_bias{"conv3_bias", 1};
+
+    GeneratorInput<Buffer<int32_t>> bn4_mean{"bn4_mean", 1};
+    GeneratorInput<Buffer<int32_t>> bn4_variance{"bn4_variance", 1};
+    GeneratorInput<Buffer<int32_t>> scale4_weight{"scale4_mean", 1};
+    GeneratorInput<Buffer<int32_t>> scale4_bias{"scale4_variance", 1};
+    GeneratorInput<Buffer<bool>> conv4_weight{"conv4_weight", 4};
+    GeneratorInput<Buffer<int32_t>> conv4_alpha{"conv4_alpha", 1};
+    GeneratorInput<Buffer<int32_t>> conv4_bias{"conv4_bias", 1};
+
+    GeneratorInput<Buffer<int32_t>> bn5_mean{"bn5_mean", 1};
+    GeneratorInput<Buffer<int32_t>> bn5_variance{"bn5_variance", 1};
+    GeneratorInput<Buffer<int32_t>> scale5_weight{"scale5_mean", 1};
+    GeneratorInput<Buffer<int32_t>> scale5_bias{"scale5_variance", 1};
+    GeneratorInput<Buffer<bool>> conv5_weight{"conv5_weight", 4};
+    GeneratorInput<Buffer<int32_t>> conv5_alpha{"conv5_alpha", 1};
+    GeneratorInput<Buffer<int32_t>> conv5_bias{"conv5_bias", 1};
+
+    GeneratorInput<Buffer<int32_t>> bn6_mean{"bn6_mean", 1};
+    GeneratorInput<Buffer<int32_t>> bn6_variance{"bn6_variance", 1};
+    GeneratorInput<Buffer<int32_t>> scale6_weight{"scale6_mean", 1};
+    GeneratorInput<Buffer<int32_t>> scale6_bias{"scale6_variance", 1};
+    GeneratorInput<Buffer<bool>> fc6_weight{"fc6_weight", 4};
+    GeneratorInput<Buffer<int32_t>> fc6_alpha{"fc6_alpha", 1};
+    GeneratorInput<Buffer<int32_t>> fc6_bias{"fc6_bias", 1};
+
+    GeneratorInput<Buffer<int32_t>> bn7_mean{"bn7_mean", 1};
+    GeneratorInput<Buffer<int32_t>> bn7_variance{"bn7_variance", 1};
+    GeneratorInput<Buffer<int32_t>> scale7_weight{"scale7_mean", 1};
+    GeneratorInput<Buffer<int32_t>> scale7_bias{"scale7_variance", 1};
+    GeneratorInput<Buffer<bool>> fc7_weight{"fc7_weight", 4};
+    GeneratorInput<Buffer<int32_t>> fc7_alpha{"fc7_alpha", 1};
+    GeneratorInput<Buffer<int32_t>> fc7_bias{"fc7_bias", 1};
+
+    GeneratorInput<Buffer<int32_t>> bn8_mean{"bn8_mean", 1};
+    GeneratorInput<Buffer<int32_t>> bn8_variance{"bn8_variance", 1};
+    GeneratorInput<Buffer<int32_t>> scale8_weight{"scale8_mean", 1};
+    GeneratorInput<Buffer<int32_t>> scale8_bias{"scale8_variance", 1};
+    GeneratorInput<Buffer<int32_t>> fc8_weight{"fc8_weight", 4};
+    GeneratorInput<Buffer<int32_t>> fc8_bias{"fc8_bias", 1};
 
     GeneratorParam<int32_t> batch_size{"batch_size", 1};
 
-    ImageParam in{Int(32), 4, "in"};
+    GeneratorOutput<Buffer<float>> prob{"prob", 2};
 
-    ImageParam conv1_weight{Int(32), 4, "conv1_weight"};
-    ImageParam conv1_bias{Int(32), 1, "conv1_bias"};
-    ImageParam bn1_mean{Int(32), 1, "bn1_mean"};
-    ImageParam bn1_variance{Int(32), 1, "bn1_variance"};
-    ImageParam scale1_weight{Int(32), 1, "scale1_mean"};
-    ImageParam scale1_bias{Int(32), 1, "scale1_variance"};
+    Var x{"x"}, y{"y"}, c{"c"}, n{"n"}, i{"i"};
 
-    ImageParam bn2_mean{Int(32), 1, "bn2_mean"};
-    ImageParam bn2_variance{Int(32), 1, "bn2_variance"};
-    ImageParam scale2_weight{Int(32), 1, "scale2_mean"};
-    ImageParam scale2_bias{Int(32), 1, "scale2_variance"};
-    ImageParam conv2_weight{Bool(), 4, "conv2_weight"};
-    ImageParam conv2_alpha{Int(32), 1, "conv2_alpha"};
-    ImageParam conv2_bias{Int(32), 1, "conv2_bias"};
-
-    ImageParam bn3_mean{Int(32), 1, "bn3_mean"};
-    ImageParam bn3_variance{Int(32), 1, "bn3_variance"};
-    ImageParam scale3_weight{Int(32), 1, "scale3_mean"};
-    ImageParam scale3_bias{Int(32), 1, "scale3_variance"};
-    ImageParam conv3_weight{Bool(), 4, "conv3_weight"};
-    ImageParam conv3_alpha{Int(32), 1, "conv3_alpha"};
-    ImageParam conv3_bias{Int(32), 1, "conv3_bias"};
-
-    ImageParam bn4_mean{Int(32), 1, "bn4_mean"};
-    ImageParam bn4_variance{Int(32), 1, "bn4_variance"};
-    ImageParam scale4_weight{Int(32), 1, "scale4_mean"};
-    ImageParam scale4_bias{Int(32), 1, "scale4_variance"};
-    ImageParam conv4_weight{Bool(), 4, "conv4_weight"};
-    ImageParam conv4_alpha{Int(32), 1, "conv4_alpha"};
-    ImageParam conv4_bias{Int(32), 1, "conv4_bias"};
-
-    ImageParam bn5_mean{Int(32), 1, "bn5_mean"};
-    ImageParam bn5_variance{Int(32), 1, "bn5_variance"};
-    ImageParam scale5_weight{Int(32), 1, "scale5_mean"};
-    ImageParam scale5_bias{Int(32), 1, "scale5_variance"};
-    ImageParam conv5_weight{Bool(), 4, "conv5_weight"};
-    ImageParam conv5_alpha{Int(32), 1, "conv5_alpha"};
-    ImageParam conv5_bias{Int(32), 1, "conv5_bias"};
-
-    ImageParam bn6_mean{Int(32), 1, "bn6_mean"};
-    ImageParam bn6_variance{Int(32), 1, "bn6_variance"};
-    ImageParam scale6_weight{Int(32), 1, "scale6_mean"};
-    ImageParam scale6_bias{Int(32), 1, "scale6_variance"};
-    ImageParam fc6_weight{Bool(), 4, "fc6_weight"};
-    ImageParam fc6_alpha{Int(32), 1, "fc6_alpha"};
-    ImageParam fc6_bias{Int(32), 1, "fc6_bias"};
-
-    ImageParam bn7_mean{Int(32), 1, "bn7_mean"};
-    ImageParam bn7_variance{Int(32), 1, "bn7_variance"};
-    ImageParam scale7_weight{Int(32), 1, "scale7_mean"};
-    ImageParam scale7_bias{Int(32), 1, "scale7_variance"};
-    ImageParam fc7_weight{Bool(), 4, "fc7_weight"};
-    ImageParam fc7_alpha{Int(32), 1, "fc7_alpha"};
-    ImageParam fc7_bias{Int(32), 1, "fc7_bias"};
-
-    ImageParam bn8_mean{Int(32), 1, "bn8_mean"};
-    ImageParam bn8_variance{Int(32), 1, "bn8_variance"};
-    ImageParam scale8_weight{Int(32), 1, "scale8_mean"};
-    ImageParam scale8_bias{Int(32), 1, "scale8_variance"};
-    ImageParam fc8_weight{Int(32), 4, "fc8_weight"};
-    ImageParam fc8_bias{Int(32), 1, "fc8_bias"};
-
-public:
-
-    Func build()
-    {
+    void generate() {
         const std::vector<int32_t> input_shape{3, 224, 224, batch_size};
         constexpr size_t FB = 16;
 
@@ -303,7 +303,7 @@ public:
         tof(i, n) = tofloat<FB>(i2v, i2v_top_shape, tof_top_shape)(i, n);
 
         // Softmax
-        Func prob("prob");
+        //Func prob("prob");
         std::vector<int32_t> prob_top_shape;
         prob(i, n) = softmax(tof, tof_top_shape, prob_top_shape)(i, n);
 
@@ -386,8 +386,7 @@ public:
         schedule(fc8, fc8_top_shape);
         schedule(i2v, i2v_top_shape);
         schedule(prob, prob_top_shape);
-
-        return prob;
     }
 };
+
 HALIDE_REGISTER_GENERATOR(AlexnetXNOR, alexnet_xnor)
