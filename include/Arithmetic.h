@@ -69,10 +69,10 @@ Func add_scalar(Func src, Expr val)
 
 Func calc_and(Func src0, Func src1)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst;
-    dst(x, y) = src0(x, y) & src1(x, y);
+    dst(x, y, c) = src0(x, y, c) & src1(x, y, c);
 
     return dst;
 }
