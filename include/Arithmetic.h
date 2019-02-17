@@ -57,12 +57,12 @@ Func add(Func src0, Func src1)
 template<typename T>
 Func add_scalar(Func src, Expr val)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
-    Expr dstval = clamp(round(cast<double>(src(x, y)) + val), 0, cast<double>(type_of<T>().max()));
+    Expr dstval = clamp(round(cast<double>(src(x, y, c)) + val), 0, cast<double>(type_of<T>().max()));
 
     Func dst;
-    dst(x, y) = cast<T>(dstval);
+    dst(x, y, c) = cast<T>(dstval);
 
     return dst;
 }
@@ -88,11 +88,11 @@ Func and_scalar(Func src0, Expr val)
 }
 
 template<typename T>
-Func average(ImageParam src, int32_t window_width, int32_t window_height)
+Func average(GeneratorInput<Buffer<T>> &src, int32_t window_width, int32_t window_height)
 {
     using upper_t = typename Upper<T>::type;
 
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func clamped = BoundaryConditions::repeat_edge(src);
     Expr w_half = div_round_to_zero(window_width, 2);
@@ -101,7 +101,7 @@ Func average(ImageParam src, int32_t window_width, int32_t window_height)
     RDom r(-w_half, window_width, -h_half, window_height);
 
     Func dst;
-    dst(x, y) = cast<T>(round(cast<float>(sum(cast<upper_t>(clamped(x + r.x, y + r.y)))) / cast<float>(window_width * window_height)) + 0.5f);
+    dst(x, y, c) = cast<T>(round(cast<float>(sum(cast<upper_t>(clamped(x + r.x, y + r.y, c)))) / cast<float>(window_width * window_height)) + 0.5f);
 
     return dst;
 }
