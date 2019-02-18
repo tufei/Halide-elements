@@ -380,18 +380,19 @@ Func sub_scalar(Func src, Expr val)
     return dst;
 }
 
-template<typename T>
-Func average_value(Func src, Func roi, int32_t width, int32_t height)
+template<typename S, typename T>
+Func average_value(GeneratorInput<Buffer<S>> &src, GeneratorInput<Buffer<uint8_t>> &roi, int32_t width, int32_t height)
 {
-    Var x{"x"};
+    Var x{"x"}, c{"c"};
     Func count{"count"}, dst{"dst"};
     RDom r{0, width, 0, height, "r"};
     r.where(roi(r.x, r.y) != 0);
 
     count(x) = sum(select(roi(r.x, r.y) == 0, 0, 1));
     schedule(count, {1});
-    dst(x) = cast<T>(select(count(x)==0, 0, sum(cast<double>(src(r.x, r.y)))/count(x)));
-        return dst;
+    dst(x, c) = cast<T>(select(count(x)==0, 0, sum(cast<double>(src(r.x, r.y, c)))/count(x)));
+
+    return dst;
 }
 
 Func filter_or(Func src0, Func src1) {
