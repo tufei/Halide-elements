@@ -46,14 +46,14 @@ Buffer<> load_bin(const std::string& fname, std::vector<int32_t> *extents)
 }
 
 class CIFAR10 : public Halide::Generator<CIFAR10> {
-
-    ImageParam in{Int(32), 4, "in"};
+public:
+    GeneratorInput<Buffer<int32_t>> in{"in", 4};
 
     GeneratorParam<int32_t> batch_size{"batch_size", 1};
 
-public:
-    Func build()
-    {
+    GeneratorOutput<Buffer<float>> tof{"tof", 2};
+
+    void generate() {
         const std::vector<int32_t> input_shape{3, 32, 32, batch_size};
         schedule(in, input_shape);
 
@@ -253,12 +253,11 @@ public:
         pool3(c, n) = global_avgpool_fixed32<FB>(relu3_3, relu3_3_top_shape, pool3_top_shape)(c, n);
 
         // tofloat:
-        Func tof("tof");
+        //Func tof("tof");
         std::vector<int32_t> tof_top_shape;
         tof(c, n) = tofloat<FB>(pool3, pool3_top_shape, tof_top_shape)(c, n);
         schedule(tof, tof_top_shape);
-
-        return tof;
     }
 };
+
 HALIDE_REGISTER_GENERATOR(CIFAR10, cifar10)
