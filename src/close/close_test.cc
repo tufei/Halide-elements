@@ -55,17 +55,20 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         //
         // Run
         //
-		const int width = 1024;
-		const int height = 768;
-		const int depth = 3;
-		const int window_width = 3;
-		const int window_height = 3;
-		const int iteration = 2;
+        const int width = 1024;
+        const int height = 768;
+        const int depth = 3;
+        const int window_width = 3;
+        const int window_height = 3;
+        const int iteration = 2;
         const std::vector<int32_t> extents{width, height, depth}, extents_structure{window_width, window_height};
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
         auto structure = mk_rand_buffer<uint8_t>(extents_structure);
-        T (*expect)[width][height][depth], workbuf[2][width][height][depth];
+        //T (*expect)[width][height][depth], workbuf[2][width][height][depth];
+        T (*expect)[width][height][depth];
+        T *tmp = new T[2 * width * height * depth];
+        T (*workbuf)[width][height][depth] = reinterpret_cast<T (*)[width][height][depth]>(tmp);
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
@@ -105,6 +108,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
                 }
             }
         }
+        delete[] tmp;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
@@ -120,8 +124,6 @@ int main()
     test<uint8_t>(close_u8);
 #endif
 #ifdef TYPE_u16
-    // currently, the program throws segmentation fault when the call below is
-    // executed, need further investigation
-    //test<uint16_t>(close_u16);
+    test<uint16_t>(close_u16);
 #endif
 }
