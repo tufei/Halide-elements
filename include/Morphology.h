@@ -14,9 +14,9 @@ namespace Element {
 namespace{
 
 template<typename T>
-Func dilate(Func src, int32_t width, int32_t height, int32_t window_width, int32_t window_height, Func structure, int32_t iteration)
+Func dilate(Func src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, Func structure, int32_t iteration)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     RDom r{-(window_width / 2), window_width, -(window_height / 2), window_height};
 
     Func allzero{"allzero"};
@@ -28,20 +28,27 @@ Func dilate(Func src, int32_t width, int32_t height, int32_t window_width, int32
 
     for (int32_t i = 0; i < iteration; i++) {
         if (i != 0) {
-            schedule(dst, {width, height});
+            schedule(dst, {width, height, depth});
         }
-        Func clamped = BoundaryConditions::repeat_edge(dst, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}});
+        Func clamped = BoundaryConditions::repeat_edge(dst, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}, {0, cast<int32_t>(depth)}});
 
         Func workbuf{"workbuf" + std::to_string(i)};
-        workbuf(x, y) = select(allzero(0),
-                               clamped(x - window_width / 2, y - window_height / 2),
+        workbuf(x, y, c) = select(allzero(0),
+                               clamped(x - window_width / 2, y - window_height / 2, c),
                                maximum_unroll(r, select(structure(r.x + window_width / 2, r.y + window_height / 2) == 0,
                                                         type_of<T>().min(),
-                                                        clamped(x + r.x, y + r.y))));
+                                                        clamped(x + r.x, y + r.y, c))));
         dst = workbuf;
     }
 
     return dst;
+}
+
+template<typename T>
+Func dilate(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, Func structure, int32_t iteration)
+{
+    Func s = src;
+    return dilate<T>(s, width, height, depth, window_width, window_height, structure, iteration);
 }
 
 template<typename T>
@@ -167,9 +174,9 @@ Func conv_with_structure(Func src, std::function<Expr(RDom, Expr)> f, Expr init,
 }
 
 template<typename T>
-Func erode(Func src, int32_t width, int32_t height, int32_t window_width, int32_t window_height, Func structure, int32_t iteration)
+Func erode(Func src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, Func structure, int32_t iteration)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     RDom r{-(window_width / 2), window_width, -(window_height / 2), window_height};
 
     Func allzero{"allzero"};
@@ -181,21 +188,28 @@ Func erode(Func src, int32_t width, int32_t height, int32_t window_width, int32_
 
     for (int32_t i = 0; i < iteration; i++) {
         if (i != 0) {
-            schedule(dst, {width, height});
+            schedule(dst, {width, height, depth});
         }
-        Func clamped = BoundaryConditions::repeat_edge(dst, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}});
+        Func clamped = BoundaryConditions::repeat_edge(dst, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}, {0, cast<int32_t>(depth)}});
 
         Func workbuf("workbuf" + std::to_string(i));
-        workbuf(x, y) = select(allzero(0),
-                               clamped(x - window_width / 2, y - window_height / 2),
+        workbuf(x, y, c) = select(allzero(0),
+                               clamped(x - window_width / 2, y - window_height / 2, c),
                                minimum_unroll(r, select(structure(r.x + window_width / 2, r.y + window_height / 2) == 0,
                                                         type_of<T>().max(),
-                                                        clamped(x + r.x, y + r.y))));
+                                                        clamped(x + r.x, y + r.y, c))));
 
         dst = workbuf;
     }
 
     return dst;
+}
+
+template<typename T>
+Func erode(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, Func structure, int32_t iteration)
+{
+    Func s = src;
+    return erode<T>(s, width, height, depth, window_width, window_height, structure, iteration);
 }
 
 template<typename T>
