@@ -276,12 +276,12 @@ Func cmpgt(Func src0, Func src1)
 }
 
 template<typename T>
-Func cmpge(Func src0, Func src1)
+Func cmpge(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst{"dst"};
-    dst(x, y) = cast<T>(select(src0(x, y) >= src1(x, y), type_of<T>().max(), 0));;
+    dst(x, y, c) = cast<T>(select(src0(x, y, c) >= src1(x, y, c), type_of<T>().max(), 0));;
 
     return dst;
 }
