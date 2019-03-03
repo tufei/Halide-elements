@@ -83,12 +83,13 @@ Func fft(Func in, const int32_t n, const int32_t batch_size)
     return out;
 }
 
-Func copy(Func src)
+template<typename T>
+Func copy(GeneratorInput<Buffer<T>> &src)
 {
-    Var x, y;
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst{"dst"};
-    dst(x, y) = src(x, y);
+    dst(x, y, c) = src(x, y, c);
 
     return dst;
 }
