@@ -134,11 +134,11 @@ Func gaussian(Func in, int32_t width, int32_t height, int32_t window_width, int3
     return dst;
 }
 
-template<uint32_t NB, uint32_t FB>
-Func convolution(Func in, int32_t width, int32_t height, Func kernel, int32_t kernel_size, int32_t unroll_factor) {
-    Var x, y;
+template<typename TI, typename TK, uint32_t NB, uint32_t FB>
+Func convolution(GeneratorInput<Buffer<TI>> &in, int32_t width, int32_t height, int32_t depth, GeneratorInput<Buffer<TK>> &kernel, Expr kernel_size, int32_t unroll_factor) {
+    Var x{"x"}, y{"y"}, c{"c"};
 
-    Func bounded = BoundaryConditions::repeat_edge(in, 0, width, 0, height);
+    Func bounded = BoundaryConditions::repeat_edge(in, 0, width, 0, height, 0, depth);
 
     Expr kh = Halide::div_round_to_zero(kernel_size, 2);
     RDom r(0, kernel_size, 0, kernel_size);
@@ -150,11 +150,11 @@ Func convolution(Func in, int32_t width, int32_t height, Func kernel, int32_t ke
     k(x, y) = kernel(x, y);
 
     using FixedNB = FixedN<NB, FB>;
-    FixedNB pv = to_fixed<NB, FB>(bounded(x+dx, y+dy));
+    FixedNB pv = to_fixed<NB, FB>(bounded(x+dx, y+dy, c));
     FixedNB kv{k(r.x, r.y)};
 
     Func out("out");
-    out(x, y) = from_fixed<uint8_t>(sum_unroll(r, pv * kv));
+    out(x, y, c) = from_fixed<uint8_t>(sum_unroll(r, pv * kv));
 
     schedule(kernel, {5, 5});
     schedule(k, {5, 5});

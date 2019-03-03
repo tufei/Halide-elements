@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
 
         const int width = 512;
         const int height = 512;
-        Buffer<uint8_t> input = mk_const_buffer<uint8_t>({width, height}, 1);
+        const int depth = 3;
+        Buffer<uint8_t> input = mk_const_buffer<uint8_t>({width, height, depth}, 1);
                 
         using fixed16_t = int16_t;
         constexpr uint32_t frac_bits = 10;
@@ -31,16 +32,18 @@ int main(int argc, char **argv) {
 
         Buffer<fixed16_t> kernel(reinterpret_cast<fixed16_t*>(kernel_data), 5, 5);
 
-        Buffer<uint8_t> output(width, height);
+        Buffer<uint8_t> output(width, height, depth);
 
         convolution(input, kernel, 3, output);
 
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                uint8_t ev = input(x, y) * 9;
-                uint8_t av = output(x, y);
-                if (ev != av) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d", x, y, ev, x, y, av).c_str());
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    uint8_t ev = input(x, y, c) * 9;
+                    uint8_t av = output(x, y, c);
+                    if (ev != av) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d", x, y, c, ev, x, y, c, av).c_str());
+                    }
                 }
             }
         }
