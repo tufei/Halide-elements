@@ -5,40 +5,39 @@
 #include "ImageProcessing.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 class Convolution : public Halide::Generator<Convolution> {
+public:
     static constexpr uint32_t NB = 20;
     static constexpr uint32_t FB = 10;
     static constexpr uint32_t UB = 32;
 
-    ImageParam in{UInt(8), 2, "in"};
+    GeneratorInput<Buffer<uint8_t>> in{"in", 3};
 #if defined(HALIDE_FOR_FPGA)
-    ImageParam kernel{Int(NB), 2, "kernel"};
+    GeneratorInput<Buffer<Int(NB)>> kernel{"kernel", 2};
 #else
-    ImageParam kernel{Int(UB), 2, "kernel"};
+    GeneratorInput<Buffer<uint32_t>> kernel{"kernel", 2};
 #endif
-    Param<int32_t> kernel_size{"kernel_size", 3, 1, 5};
+    GeneratorInput<uint32_t> kernel_size{"kernel_size", 3, 1, 5};
 
     GeneratorParam<int32_t> width{"width", 512};
     GeneratorParam<int32_t> height{"height", 512};
+    GeneratorParam<int32_t> depth{"depth", 3};
     GeneratorParam<int32_t> unroll_factor{"unroll_factor", 2};
 
-public:
-    Func build() {
-        Func out{"out"};
+    GeneratorOutput<Buffer<uint8_t>> out{"out", 3};
 
-        out = Element::convolution<NB, FB>(in, width, height, kernel, kernel_size.get(), unroll_factor);
+    void generate() {
+        out = convolution<uint8_t, uint32_t, NB, FB>(in, width, height, depth, kernel, kernel_size, unroll_factor);
 
-        schedule(in, {width, height});
+        schedule(in, {width, height, depth});
         schedule(kernel, {5, 5});
-        schedule(out, {width, height});
+        schedule(out, {width, height, depth});
 
         if (unroll_factor) {
             out.unroll(out.args()[0], unroll_factor);
         }
-
-        return out;
     }
 };
 

@@ -18,7 +18,8 @@ int main(int argc, char **argv) {
 
         const int width = 512;
         const int height = 512;
-        Buffer<uint8_t> input = mk_const_buffer<uint8_t>({width, height}, 1);
+        const int depth = 3;
+        Buffer<uint8_t> input = mk_const_buffer<uint8_t>({width, height, depth}, 1);
 
         using fixed20_t = int32_t;
         constexpr uint32_t frac_bits = 10;
@@ -34,33 +35,34 @@ int main(int argc, char **argv) {
 
         Buffer<fixed20_t> kernel(reinterpret_cast<fixed20_t*>(kernel_data), 5, 5);
 
-        Buffer<uint8_t> output(width, height);
+        Buffer<uint8_t> output(width, height, depth);
 
         convolution_arbitrary_bits(input, kernel, 3, output);
 
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                fixed20_t s = 0;
-                for (int ry=-1; ry<=1; ry++) {
-                    for (int rx=-1; rx<=1; rx++) {
-                        int cx = BORDER_INTERPOLATE(x + rx, width);
-                        int cy = BORDER_INTERPOLATE(y + ry, height);
-                        // Simulate add & mult of Fixed<base_bits, frac_bits>
-                        s += ((kernel(rx + 1, ry + 1) * (input(cx, cy) << frac_bits)) >> frac_bits);
-                        // Bitmask for simulating overflow
-                        s = s & ((1 << base_bits) - 1);
-                        // Sign extension
-                        s = s << (base_bits - frac_bits) >> (base_bits - frac_bits);
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    fixed20_t s = 0;
+                    for (int ry=-1; ry<=1; ry++) {
+                        for (int rx=-1; rx<=1; rx++) {
+                            int cx = BORDER_INTERPOLATE(x + rx, width);
+                            int cy = BORDER_INTERPOLATE(y + ry, height);
+                            // Simulate add & mult of Fixed<base_bits, frac_bits>
+                            s += ((kernel(rx + 1, ry + 1) * (input(cx, cy, c) << frac_bits)) >> frac_bits);
+                            // Bitmask for simulating overflow
+                            s = s & ((1 << base_bits) - 1);
+                            // Sign extension
+                            s = s << (base_bits - frac_bits) >> (base_bits - frac_bits);
+                        }
                     }
-                }
-                uint8_t ev = s >> frac_bits;
-                uint8_t av = output(x, y);
-                if (ev != av) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d", x, y, ev, x, y, av).c_str());
+                    uint8_t ev = s >> frac_bits;
+                    uint8_t av = output(x, y, c);
+                    if (ev != av) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d", x, y, c, ev, x, y, c, av).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
