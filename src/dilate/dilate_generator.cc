@@ -4,30 +4,29 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class Dilate : public Halide::Generator<Dilate<T>> {
 public:
-    ImageParam input{type_of<T>(), 2, "input"};
-    ImageParam structure{UInt(8), 2, "structure"};
+    GeneratorInput<Buffer<T>> input{"input", 3};
+    GeneratorInput<Buffer<uint8_t>> structure{"structure", 2};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
     GeneratorParam<int32_t> iteration{"iteration", 2};
     GeneratorParam<int32_t> window_width{"window_width", 3, 3, 17};
     GeneratorParam<int32_t> window_height{"window_height", 3, 3, 17};
 
-    Func build() {
-        Func output{"output"};
+    GeneratorOutput<Buffer<T>> output{"output", 3};
 
-        output = Element::dilate<T>(input, width, height, window_width, window_height, structure, iteration);
+    void generate() {
+        output = dilate<T>(input, width, height, depth, window_width, window_height, structure, iteration);
 
-        schedule(input, {width, height});
+        schedule(input, {width, height, depth});
         schedule(structure, {window_width, window_height});
-        schedule(output, {width, height});
-
-        return output;
+        schedule(output, {width, height, depth});
     }
 };
 
