@@ -4,26 +4,25 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class DivScalar : public Halide::Generator<DivScalar<T>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
-    Param<double> value{"value", 2.0};
+    GeneratorInput<Buffer<T>> src{"src", 3};
+    GeneratorInput<double> value{"value", 2.0};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst("dst");
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-        dst = Element::div_scalar<T>(src, value);
+    void generate() {
+        dst = div_scalar<T>(src, value);
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
-
-        return dst;
+        schedule(src, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 

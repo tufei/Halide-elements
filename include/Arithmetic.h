@@ -131,15 +131,15 @@ Func mul_scalar(Func src0, Expr val)
 }
 
 template<typename T>
-Func div_scalar(Func src, Expr val)
+Func div_scalar(GeneratorInput<Buffer<T>> &src, Expr val)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
-    Expr srcval = src(x, y);
+    Expr srcval = src(x, y, c);
     Expr dstval = max(min(srcval / val, cast<double>(type_of<T>().max())), 0);
 
     Func dst;
-    dst(x, y) = cast<T>(round(dstval));
+    dst(x, y, c) = cast<T>(round(dstval));
 
     return dst;
 }
