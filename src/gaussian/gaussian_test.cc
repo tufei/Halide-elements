@@ -22,10 +22,11 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, double _sigma, struct 
         //
         const int width = 1024;
         const int height = 768;
+        const int depth = 3;
         const int window_width = 3;
         const int window_height = 3;
         const double sigma = 1.0;
-        const std::vector<int32_t> extents{width, height};
+        const std::vector<int32_t> extents{width, height, depth};
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
@@ -38,30 +39,31 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, double _sigma, struct 
             }
         }
 
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                double expect_f = 0.0f;
-                for (int j = -(window_height/2); j < -(window_height/2) + window_height; j++) {
-                    int yy = std::min(std::max(0, y + j), height - 1);
-                    for (int i = -(window_width/2); i < -(window_width/2) + window_width; i++) {
-                        int xx = std::min(std::max(0, x + i), width - 1);
-                        expect_f += exp(-(i * i + j * j) / (2 * sigma * sigma)) * input(xx, yy);
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    double expect_f = 0.0f;
+                    for (int j = -(window_height/2); j < -(window_height/2) + window_height; j++) {
+                        int yy = std::min(std::max(0, y + j), height - 1);
+                        for (int i = -(window_width/2); i < -(window_width/2) + window_width; i++) {
+                            int xx = std::min(std::max(0, x + i), width - 1);
+                            expect_f += exp(-(i * i + j * j) / (2 * sigma * sigma)) * input(xx, yy, c);
+                        }
                     }
-                }
-                expect_f /= kernel_sum;
-                T expect = round_to_nearest_even<T>(expect_f);
-                T actual = output(x, y);
+                    expect_f /= kernel_sum;
+                    T expect = round_to_nearest_even<T>(expect_f);
+                    T actual = output(x, y, c);
 
-                // HLS backend の C-simulation と LLVM backend で丸めの方法とexpの実装が異なるため、1以内の誤差を許している
-                // (C-simulation は round half away from zero だが、LLVM 版は round half to even)
-                if (abs(expect - actual) > 1) {
-                    printf("dst(%d, %d) = %s = round_f32(%.20f)\n", x, y, std::to_string(expect).c_str(), expect_f);
-                    fflush(stdout);
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d, expect_f = %f", x, y, expect, x, y, actual, expect_f).c_str());
+                    // HLS backend の C-simulation と LLVM backend で丸めの方法とexpの実装が異なるため、1以内の誤差を許している
+                    // (C-simulation は round half away from zero だが、LLVM 版は round half to even)
+                    if (abs(expect - actual) > 1) {
+                        printf("dst(%d, %d, %d) = %s = round_f32(%.20f)\n", x, y, c, std::to_string(expect).c_str(), expect_f);
+                        fflush(stdout);
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d, expect_f = %f", x, y, c, expect, x, y, c, actual, expect_f).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

@@ -109,11 +109,11 @@ Func affine(Func in, int32_t width, int32_t height, Param<float> degrees,
 }
 
 template<typename T>
-Func gaussian(Func in, int32_t width, int32_t height, int32_t window_width, int32_t window_height, Param<double> sigma)
+Func gaussian(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, GeneratorInput<double> &sigma)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
-    Func clamped = BoundaryConditions::repeat_edge(in, 0, width, 0, height);
+    Func clamped = BoundaryConditions::repeat_edge(in, 0, width, 0, height, 0, depth);
     RDom r(-(window_width / 2), window_width, -(window_height / 2), window_height);
     Func kernel("kernel");
     kernel(x, y) = exp(-(x * x + y * y) / (2 * sigma * sigma));
@@ -123,8 +123,8 @@ Func gaussian(Func in, int32_t width, int32_t height, int32_t window_width, int3
     kernel_sum(x) = sum(kernel(r.x, r.y));
     kernel_sum.compute_root();
     Func dst("dst");
-    Expr dstval = cast<double>(sum(clamped(x + r.x, y + r.y) * kernel(r.x, r.y)));
-    dst(x,y) = cast<T>(round(dstval / kernel_sum(0)));
+    Expr dstval = cast<double>(sum(clamped(x + r.x, y + r.y, c) * kernel(r.x, r.y)));
+    dst(x, y, c) = cast<T>(round(dstval / kernel_sum(0)));
 
     kernel.compute_root();
     kernel.bound(x, -(window_width / 2), window_width);
