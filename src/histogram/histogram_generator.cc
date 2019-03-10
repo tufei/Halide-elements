@@ -4,26 +4,25 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class Histogram : public Halide::Generator<Histogram<T>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
     GeneratorParam<int32_t> hist_width{"hist_width", std::numeric_limits<T>::max() + 1};
 
-    Func build() {
-        Func dst{"dst"};
+    GeneratorOutput<Buffer<uint32_t>> dst{"dst", 2};
 
-        dst = Element::histogram<T>(src, width, height, hist_width);
+    void generate() {
+        dst = histogram<T>(src, width, height, depth, hist_width);
 
-        schedule(src, {width, height});
-        schedule(dst, {hist_width});
-
-        return dst;
+        schedule(src, {width, height, depth});
+        schedule(dst, {hist_width, depth});
     }
 };
 

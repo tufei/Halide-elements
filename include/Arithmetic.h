@@ -307,19 +307,19 @@ Func integral(Func in, int32_t width, int32_t height)
 
 
 template<typename T>
-Func histogram(Func src, int32_t width, int32_t height, int32_t hist_width)
+Func histogram(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth, int32_t hist_width)
 {
     uint32_t hist_size = static_cast<uint32_t>(std::numeric_limits<T>::max()) + 1;
     int32_t bin_size = (hist_size + hist_width - 1) / hist_width;
 
-    Var x{"x"};
+    Var x{"x"}, c{"c"};
     RDom r{0, width, 0, height};
 
     Func dst;
-    dst(x) = cast<uint32_t>(0);
+    dst(x, c) = cast<uint32_t>(0);
 
-    Expr idx = cast<int32_t>(src(r.x, r.y) / bin_size);
-    dst(idx) += cast<uint32_t>(1);
+    Expr idx = cast<int32_t>(src(r.x, r.y, c) / bin_size);
+    dst(idx, c) += cast<uint32_t>(1);
 
     return dst;
 }
