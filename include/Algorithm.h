@@ -30,13 +30,13 @@ Expr bit_reverse(Expr i, const int n)
     return ri;
 }
 
-Func fft(Func in, const int32_t n, const int32_t batch_size)
+Func fft(GeneratorInput<Buffer<float>> &in, const int32_t n, const int32_t batch_size)
 {
     Var c{"c"}, i{"i"}, k{"k"};
 
     Func weight("weight");
     Expr theta = static_cast<float>(-2.0 * M_PI) * cast<float>(i) / static_cast<float>(n);
-    weight(c, i) = select(c ==0, cos(theta), sin(theta));
+    weight(c, i) = select(c == 0, cos(theta), sin(theta));
 
     Func stage("in");
     stage(c, i, k) = in(c, i, k);

@@ -2,27 +2,27 @@
 #include <Element.h>
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 class FFT : public Halide::Generator<FFT> {
+public:
+    GeneratorInput<Buffer<float>> src{"src", 3};
+
     GeneratorParam<int32_t> n_{"n", 256};
     GeneratorParam<int32_t> batch_size_{"batch_size", 4};
-    ImageParam in{Float(32), 3, "in"};
 
-public:
-    Func build()
-    {
-        Var c{"c"}, i{"i"}, k{"k"};
-        Func out("out");
+    GeneratorOutput<Buffer<float>> dst{"dst", 3};
+
+    void generate() {
+        Var c{"cc"}, i{"ii"}, k{"kk"};
+
         const int32_t n = static_cast<uint32_t>(n_);
         const int32_t batch_size = static_cast<uint32_t>(batch_size_);
 
-        out(c, i, k) = Element::fft(in, n, batch_size)(c, i, k);
+        dst(c, i, k) = fft(src, n, batch_size)(c, i, k);
 
-        schedule(in, {2, n, batch_size});
-        schedule(out, {2, n, batch_size}).unroll(c);
-
-        return out;
+        schedule(src, {2, n, batch_size});
+        //schedule(dst, {2, n, batch_size}).unroll(c);
     }
 };
 
