@@ -3,28 +3,27 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class ErodeRect : public Halide::Generator<ErodeRect<T>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
     GeneratorParam<int32_t> iteration{"iteration", 2};
     GeneratorParam<int32_t> window_width{"window_width", 3, 3, 17};
     GeneratorParam<int32_t> window_height{"window_height", 3, 3, 17};
 
-    Func build() {
-        Func dst{"dst"};
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-        dst = Element::erode_rect<T>(src, width, height, window_width, window_height, iteration);
+    void generate() {
+        dst = erode_rect<T>(src, width, height, depth, window_width, window_height, iteration);
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
-
-        return dst;
+        schedule(src, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 
