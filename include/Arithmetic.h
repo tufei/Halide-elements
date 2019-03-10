@@ -254,12 +254,12 @@ Func max_value(Func src, Func roi, int32_t width, int32_t height)
 }
 
 template<typename T>
-Func equal(Func src0, Func src1)
+Func equal(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst{"dst"};
-    dst(x, y) = cast<T>(select(src0(x, y) == src1(x, y), type_of<T>().max(), 0));
+    dst(x, y, c) = cast<T>(select(src0(x, y, c) == src1(x, y, c), type_of<T>().max(), 0));
 
     return dst;
 }
