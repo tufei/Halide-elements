@@ -23,38 +23,42 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_
         //
         const int width = 1024;
         const int height = 768;
+        const int depth = 3;
         const int hist_width = 256;
-        const std::vector<int32_t> extents{width, height}, extents_hist{hist_width, hist_width};
+        const std::vector<int32_t> extents{width, height, depth}, extents_hist{hist_width, hist_width, depth};
         auto input0 = mk_rand_buffer<T>(extents);
         auto input1 = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<uint32_t>(extents_hist);
-        std::vector<uint32_t> expect(hist_width * hist_width);
+        std::vector<uint32_t> expect(hist_width * hist_width * depth);
 
         double step =
             hist_width / (static_cast<double>((std::numeric_limits<T>::max)()) + 1.0);
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                int i_idx =
-                    static_cast<int>(std::floor((static_cast<double>(input0(x, y))) * step));
-                int j_idx =
-                    static_cast<int>(std::floor((static_cast<double>(input1(x, y))) * step));
-                if (i_idx < hist_width && j_idx < hist_width) {
-                    expect[i_idx + j_idx * hist_width]++;
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    int i_idx =
+                        static_cast<int>(std::floor((static_cast<double>(input0(x, y, c))) * step));
+                    int j_idx =
+                        static_cast<int>(std::floor((static_cast<double>(input1(x, y, c))) * step));
+                    if (i_idx < hist_width && j_idx < hist_width) {
+                        expect[(i_idx + j_idx * hist_width) * depth + c]++;
+                    }
                 }
             }
         }
 
         func(input0, input1, output);
 
-        for (int y=0; y<hist_width; ++y) {
-            for (int x=0; x<hist_width; ++x) {
-                uint32_t actual = output(x, y);
-                if (expect[x + y * hist_width] != actual) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d", x, y, expect[x + y * hist_width], x, y, actual).c_str());
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<hist_width; ++y) {
+                for (int x=0; x<hist_width; ++x) {
+                    uint32_t actual = output(x, y, c);
+                    if (expect[(x + y * hist_width) * depth + c] != actual) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d", x, y, c, expect[(x + y * hist_width) * depth + c], x, y, c, actual).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

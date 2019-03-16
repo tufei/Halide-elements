@@ -325,16 +325,16 @@ Func histogram(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, in
 }
 
 template<typename T>
-Func histogram2d(Func src0, Func src1, int32_t width, int32_t height, int32_t hist_width)
+Func histogram2d(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, int32_t width, int32_t height, int32_t hist_width)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     RDom r{0, width, 0, height};
 
     Func dst;
-    dst(x, y) = cast<uint32_t>(0);
-    Expr idx0 = cast<int32_t>(src0(r.x, r.y) * cast<uint64_t>(hist_width) / (cast<uint64_t>(type_of<T>().max()) + 1));
-    Expr idx1 = cast<int32_t>(src1(r.x, r.y) * cast<uint64_t>(hist_width) / (cast<uint64_t>(type_of<T>().max()) + 1));
-    dst(idx0, idx1) += cast<uint32_t>(1);
+    dst(x, y, c) = cast<uint32_t>(0);
+    Expr idx0 = cast<int32_t>(src0(r.x, r.y, c) * cast<uint64_t>(hist_width) / (cast<uint64_t>(type_of<T>().max()) + 1));
+    Expr idx1 = cast<int32_t>(src1(r.x, r.y, c) * cast<uint64_t>(hist_width) / (cast<uint64_t>(type_of<T>().max()) + 1));
+    dst(idx0, idx1, c) += cast<uint32_t>(1);
 
     return dst;
 }
