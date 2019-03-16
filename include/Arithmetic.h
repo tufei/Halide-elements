@@ -286,21 +286,21 @@ Func cmpge(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
     return dst;
 }
 
-template<typename T>
-Func integral(Func in, int32_t width, int32_t height)
+template<typename T, typename D>
+Func integral(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height, int32_t depth)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"}, integral{"integral"};
-    integral(x, y) = cast<uint64_t>(in(x, y));
+    integral(x, y, c) = cast<uint64_t>(in(x, y, c));
 
     RDom r1{1, width - 1, 0, height, "r1"};
-    integral(r1.x, r1.y) += integral(r1.x - 1, r1.y);
+    integral(r1.x, r1.y, c) += integral(r1.x - 1, r1.y, c);
 
     RDom r2{0, width, 1, height - 1, "r2"};
-    integral(r2.x, r2.y) += integral(r2.x, r2.y - 1);
-    schedule(integral, {width, height});
+    integral(r2.x, r2.y, c) += integral(r2.x, r2.y - 1, c);
+    schedule(integral, {width, height, depth});
 
-    dst(x, y) = cast<T>(integral(x, y));
+    dst(x, y, c) = cast<D>(integral(x, y, c));
 
     return dst;
 }

@@ -3,24 +3,24 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T, typename D>
 class Integral : public Halide::Generator<Integral<T, D>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst{"dst"};
-        dst = Element::integral<D>(src, width, height);
+    GeneratorOutput<Buffer<D>> dst{"dst", 3};
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
+    void generate() {
+        dst = integral<T, D>(src, width, height, depth);
 
-        return dst;
+        schedule(src, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 
