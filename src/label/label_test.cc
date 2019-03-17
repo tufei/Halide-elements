@@ -17,8 +17,8 @@
 
 template<typename T>
 Halide::Runtime::Buffer<uint32_t>& label_ref(Halide::Runtime::Buffer<uint32_t>& dst,
-                                const Halide::Runtime::Buffer<T>& src,
-                                const int32_t width, const int32_t height)
+                                             const Halide::Runtime::Buffer<T>& src,
+                                             const int32_t width, const int32_t height)
 {
     int dst_pitch = width;
     int x, y;
@@ -110,11 +110,12 @@ Halide::Runtime::Buffer<uint32_t>& label_ref(Halide::Runtime::Buffer<uint32_t>& 
             x = (label-1)%dst_pitch;
             y = (label-1)/dst_pitch;
 
-            while (label != dst(x, y)){
+            while (label != dst(x, y)) {
                 label = dst(x, y);
                 x = (label-1)%dst_pitch;
                 y = (label-1)/dst_pitch;
-        }}
+            }
+        }
 
         dst(j, i) = label;
       }
@@ -141,8 +142,8 @@ std::map<uint32_t, uint32_t, std::greater<uint32_t>> insertMap(std::map<uint32_t
 
 Halide::Runtime::Buffer<uint32_t>  mergeSameGroup(Halide::Runtime::Buffer<uint32_t>& srcdst,
                                                   Halide::Runtime::Buffer<uint32_t>& marker,
-                                                  int32_t width, int32_t height){
-
+                                                  int32_t width, int32_t height)
+{
     std::map<uint32_t, uint32_t, std::greater<uint32_t>> sameLabel;
     for(int i = 0; i<height; i++){
         for(int j = 0; j<width; j++){
@@ -168,11 +169,11 @@ Halide::Runtime::Buffer<uint32_t>  mergeSameGroup(Halide::Runtime::Buffer<uint32
     const std::vector<int32_t> extents{bufWith, 2};
 
     Halide::Runtime::Buffer<uint32_t> toReturn(extents);
-    int c = 0;
+    int r = 0;
     for(auto m: sameLabel){
-        toReturn(c, 0) = m.first;
-        toReturn(c, 1) = m.second;
-        c++;
+        toReturn(r, 0) = m.first;
+        toReturn(r, 1) = m.second;
+        r++;
     }
     return toReturn;
 }
@@ -181,8 +182,8 @@ Halide::Runtime::Buffer<uint32_t>  mergeSameGroup(Halide::Runtime::Buffer<uint32
 
 template<typename T>
 int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
-                     struct halide_buffer_t *_dst0_buffer,
-                     struct halide_buffer_t *_dst1_buffer))
+                           struct halide_buffer_t *_dst0_buffer,
+                           struct halide_buffer_t *_dst1_buffer))
 {
     try {
         bool printbuff = false;
@@ -210,19 +211,19 @@ int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
         auto expect = mk_null_buffer<uint32_t>(extents);
         expect = label_ref(expect, input, width, height);
 
-            auto halide1_s = std::chrono::high_resolution_clock::now();
+        auto halide1_s = std::chrono::high_resolution_clock::now();
         first_pass(input, pass1[0], pass1[1]);
-            auto halide1_e = std::chrono::high_resolution_clock::now();
+        auto halide1_e = std::chrono::high_resolution_clock::now();
 
-            auto non_halide_s = std::chrono::high_resolution_clock::now();
+        auto non_halide_s = std::chrono::high_resolution_clock::now();
         Halide::Runtime::Buffer<uint32_t> buf = mergeSameGroup(pass1[0], pass1[1], width, height);
-            auto non_halide_e = std::chrono::high_resolution_clock::now();
+        auto non_halide_e = std::chrono::high_resolution_clock::now();
 
         int32_t bufWidth = buf.width();
 
-            auto halide2_s = std::chrono::high_resolution_clock::now();
+        auto halide2_s = std::chrono::high_resolution_clock::now();
         second_pass(pass1[0], buf, bufWidth,output);
-            auto halide2_e = std::chrono::high_resolution_clock::now();
+        auto halide2_e = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double> dth1 = halide1_e - halide1_s;
         std::chrono::duration<double> dtn = non_halide_e - non_halide_s;

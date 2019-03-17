@@ -1263,7 +1263,8 @@ Func subimage(Func src, Expr originx, Expr originy)
     return dst;
 }
 
-Func label_firstpass(Func src, int32_t width, int32_t height)
+template<typename T>
+Func label_firstpass(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height)
 {
     Func original{"original"};
     Expr MAX = width*height+1;
@@ -1277,21 +1278,17 @@ Func label_firstpass(Func src, int32_t width, int32_t height)
     findMin(x, y) = extend(x, y);
 
     RDom s{0, width, 0, height, "s"};
-    findMin(s.x, s.y) = select(findMin(s.x, s.y)== MAX,
-                                    findMin(s.x, s.y),
-                                    min(findMin(s.x, s.y),
-                                        min(min(findMin(s.x-1, s.y-1),
-                                                findMin(s.x,   s.y-1)),
-                                            min(findMin(s.x+1, s.y-1),
-                                                findMin(s.x-1, s.y  )))));
+    findMin(s.x, s.y) = select(findMin(s.x, s.y) == MAX,
+                               findMin(s.x, s.y), min(findMin(s.x, s.y),
+                               min(min(findMin(s.x-1, s.y-1),
+                               findMin(s.x, s.y-1)), min(findMin(s.x+1, s.y-1),
+                               findMin(s.x-1, s.y)))));
     findMin.compute_root();
 
     Func backward{"back"}, whereUp{"where"};
-    whereUp(x, y) = select(findMin(x, y)== MAX, MAX,
-                                                min(min(findMin(x+1, y  ),
-                                                        findMin(x-1, y+1)),
-                                                    min(findMin(x  , y+1),
-                                                        findMin(x+1, y+1))));
+    whereUp(x, y) = select(findMin(x, y) == MAX, MAX,
+                           min(min(findMin(x+1, y), findMin(x-1, y+1)),
+                           min(findMin(x, y+1), findMin(x+1, y+1))));
     whereUp(x, y) = select(whereUp(x, y) < findMin(x, y), whereUp(x, y), MAX);
     whereUp.compute_root();
 
@@ -1306,43 +1303,38 @@ Func label_firstpass(Func src, int32_t width, int32_t height)
     Expr origin = backward(clamp(tarX, 0, width), clamp(tarY, 0, height));
 
     backward(clamp(indX, 0, width), clamp(indY, 0, height)) =
-        select( target> whereUp(s.x, s.y), min(whereUp(s.x, s.y), origin),
-               target);
+        select(target > whereUp(s.x, s.y), min(whereUp(s.x, s.y), origin), target);
     backward.compute_root();
 
     Func final;
     final(x, y) = backward(x, y);
-    final(s.x, s.y) = select(final(s.x, s.y)== MAX,
-                                     final(s.x, s.y),
-                                     min(final(s.x, s.y),
-                                         min(min(final(s.x-1, s.y-1),
-                                                 final(s.x,   s.y-1)),
-                                             min(final(s.x+1, s.y-1),
-                                                 final(s.x-1, s.y  )))));
+    final(s.x, s.y) = select(final(s.x, s.y) == MAX, final(s.x, s.y),
+                                min(final(s.x, s.y),
+                                min(min(final(s.x-1, s.y-1),
+                                final(s.x, s.y-1)), min(final(s.x+1, s.y-1),
+                                final(s.x-1, s.y)))));
     final.compute_root();
 
     Func firstPass{"firstPass"};
     copy(x, y) = select(final(x, y) == MAX, 0, final(x, y));
-    firstPass(x, y) = Tuple(copy(x, y),
-                            select(copy(x, y) ==0, 0,
-                                   copy(x,y) < copy(x-1, y-1) ||
-                                   copy(x,y) < copy(x  , y-1) ||
-                                   copy(x,y) < copy(x+1, y-1) ||
-                                   copy(x,y) < copy(x-1, y),
-                                    1, 0));
+    firstPass(x, y) = Tuple(copy(x, y), select(copy(x, y) == 0, 0,
+                            copy(x, y) < copy(x-1, y-1) ||
+                            copy(x, y) < copy(x, y-1) ||
+                            copy(x, y) < copy(x+1, y-1) ||
+                            copy(x, y) < copy(x-1, y), 1, 0));
     //firstPass.print_loop_nest();
     return firstPass;
 }
 
-Func label_secondpass(Func src, Func buf, int32_t width, int32_t height, Expr bufW){
+Func label_secondpass(GeneratorInput<Buffer<uint32_t>> &src, GeneratorInput<Buffer<uint32_t>> &buf, int32_t width, int32_t height, Expr bufW)
+{
     Func secondPass;
     Var x, y;
     RDom r{0, bufW, "r"};
 
     secondPass(x, y) = src(x, y);
-    secondPass(x, y) = select(src(x, y)!=0&&buf(r.x, 0) == secondPass(x, y),
-                                    buf(r.x, 1),
-                                    secondPass(x, y));
+    secondPass(x, y) = select(src(x, y) != 0 && buf(r.x, 0) == secondPass(x, y),
+                                 buf(r.x, 1), secondPass(x, y));
 
     // secondPass.print_loop_nest();
     return secondPass;
