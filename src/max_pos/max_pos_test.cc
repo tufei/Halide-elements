@@ -27,30 +27,32 @@ struct initial<T, false> {
 };
 
 template <typename T>
-std::tuple<uint32_t, uint32_t>
-max_pos_ref(const Halide::Runtime::Buffer<T>& src, const int width, const int height) {
+std::tuple<uint32_t, uint32_t, uint32_t>
+max_pos_ref(const Halide::Runtime::Buffer<T>& src, const int width, const int height, const int depth) {
     T max = initial<T, std::numeric_limits<T>::has_infinity>::value();
-    uint32_t max_x = 0, max_y = 0;
+    uint32_t max_x = 0, max_y = 0, max_c = 0;
     
-    for (int i = 0; i < height; i++) {
+    for(int c = 0; c < depth; c++) {
         T cur_max = max;
+        int l = -1;
         int k = -1;
-        for (int j = width - 1; j >= 0; j--) {
-            if (src(j, i) >= cur_max) {
-                cur_max = src(j, i);
-                k = j;
+        for(int i = height - 1; i >= 0; i--) {
+            for(int j = width - 1; j >= 0; j--) {
+                if (src(j, i, c) >= cur_max) {
+                    cur_max = src(j, i, c);
+                    k = j;
+                    l = i;
+                }
             }
         }
-        {
-            if (k >= 0 && (cur_max > max ||
-                           (cur_max == max && static_cast<uint32_t>(i) < max_y))) {
-                max = cur_max;
-                max_x = k;
-                max_y = i;
-            }
+        if (l >= 0 && k >= 0 && (cur_max > max || (cur_max == max && static_cast<uint32_t>(c) < max_c))) {
+            max = cur_max;
+            max_x = k;
+            max_y = l;
+            max_c = c;
         }
     }
-    return std::make_tuple(max_x, max_y);
+    return std::make_tuple(max_x, max_y, max_c);
 }
 
 
@@ -65,19 +67,21 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         //
         const int width = 1024;
         const int height = 768;
-        const std::vector<int32_t> extents{width, height};
+        const int depth = 3;
+        const std::vector<int32_t> extents{width, height, depth};
         auto input = mk_rand_buffer<T>(extents);
-        auto output = mk_null_buffer<uint32_t>({2});
+        auto output = mk_null_buffer<uint32_t>({3});
 
         func(input, output);
 
-        uint32_t expect_x, expect_y;
-        std::tie(expect_x, expect_y) = max_pos_ref<T>(input, width, height);
+        uint32_t expect_x, expect_y, expect_c;
+        std::tie(expect_x, expect_y, expect_c) = max_pos_ref<T>(input, width, height, depth);
         uint32_t actual_x = output(0);
         uint32_t actual_y = output(1);
-        if (expect_x != actual_x || expect_y != actual_y) {
-            throw std::runtime_error(format("Error: expect = (%u, %u), actual = (%u, %u)",
-                                            expect_x, expect_y, actual_x, actual_y));
+        uint32_t actual_c = output(2);
+        if (expect_x != actual_x || expect_y != actual_y || expect_c != actual_c) {
+            throw std::runtime_error(format("Error: expect = (%u, %u, %u), actual = (%u, %u, %u)",
+                                            expect_x, expect_y, expect_c, actual_x, actual_y, actual_c));
         }
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

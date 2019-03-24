@@ -220,13 +220,14 @@ Func max(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
     return dst;
 }
 
-Func max_pos(Func src, int32_t width, int32_t height)
+template<typename T>
+Func max_pos(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth)
 {
     Var x{"x"};
-    RDom r{0, width, 0, height, "r"};
+    RDom r{0, width, 0, height, 0, depth, "r"};
 
     Func res{"res"};
-    res(x) = argmax(r, src(r.x, r.y));
+    res(x) = argmax(r, src(r.x, r.y, r.z));
     schedule(res, {1});
 
     Var d{"d"};
@@ -234,6 +235,7 @@ Func max_pos(Func src, int32_t width, int32_t height)
     dst(d) = cast<uint32_t>(0);
     dst(0) = cast<uint32_t>(res(0)[0]);
     dst(1) = cast<uint32_t>(res(0)[1]);
+    dst(2) = cast<uint32_t>(res(0)[2]);
 
     return dst;
 }
