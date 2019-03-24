@@ -209,12 +209,13 @@ Func min_value(Func src, Func roi, int32_t width, int32_t height)
     return dst;
 }
 
-Func max(Func src0, Func src1)
+template<typename T>
+Func max(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst;
-    dst(x, y) = max(src0(x, y), src1(x, y));
+    dst(x, y, c) = max(src0(x, y, c), src1(x, y, c));
 
     return dst;
 }
