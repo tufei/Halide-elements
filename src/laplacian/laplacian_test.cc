@@ -24,9 +24,10 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         //
         const int width = 8;
         const int height = 8;
+        const int depth = 3;
         const int window_width = 3;
         const int window_height = 3;
-        const std::vector<int32_t> extents{width, height};
+        const std::vector<int32_t> extents{width, height, depth};
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
@@ -34,25 +35,27 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
 
         double kernel[3][3] = {{-1, -1, -1}, {-1, 8, -1}, {-1, -1, -1}};
 
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                double sum = 0;
-                for (int k = -1; k <= 1; k++) {
-                    for (int l = -1; l <= 1; l++) {
-                        const int y = BORDER_INTERPOLATE(i + k, height);
-                        const int x = BORDER_INTERPOLATE(j + l, width);
-                        sum += static_cast<double>(input(x, y)) * kernel[k + 1][l + 1];
+        for (int c = 0; c < depth; c++) {
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    double sum = 0;
+                    for (int k = -1; k <= 1; k++) {
+                        for (int l = -1; l <= 1; l++) {
+                            const int y = BORDER_INTERPOLATE(i + k, height);
+                            const int x = BORDER_INTERPOLATE(j + l, width);
+                            sum += static_cast<double>(input(x, y, c)) * kernel[k + 1][l + 1];
+                        }
                     }
-                }
-                if (sum < 0) sum = -sum;
-                if (sum > (std::numeric_limits<T>::max)())
-                    sum = (std::numeric_limits<T>::max)();
-                T expect = static_cast<T>(sum);
-                T actual = output(j, i);
-                
-                if (abs(expect - actual) > 1) {
-                    // throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d", j, i, expect, j, i, actual).c_str());
-                    printf("Error: expect(%d, %d) = %d, actual(%d, %d) = %d\n", j, i, expect, j, i, actual);
+                    if (sum < 0) sum = -sum;
+                    if (sum > (std::numeric_limits<T>::max)())
+                        sum = (std::numeric_limits<T>::max)();
+                    T expect = static_cast<T>(sum);
+                    T actual = output(j, i, c);
+                    
+                    if (abs(expect - actual) > 1) {
+                        // throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d", j, i, expect, j, i, actual).c_str());
+                        printf("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d\n", j, i, c, expect, j, i, c, actual);
+                    }
                 }
             }
         }

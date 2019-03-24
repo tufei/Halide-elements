@@ -3,24 +3,24 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class Laplacian : public Halide::Generator<Laplacian<T>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
     GeneratorParam<int32_t> width{"width", 8};
     GeneratorParam<int32_t> height{"height", 8};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst{"dst"};
-        dst = Element::laplacian<T>(src, width, height);
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
+    void generate() {
+        dst = laplacian<T>(src, width, height, depth);
 
-        return dst;
+        schedule(src, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 
