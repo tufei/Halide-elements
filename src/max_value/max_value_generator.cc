@@ -3,27 +3,26 @@
 #include <Element.h>
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class MaxValue : public Halide::Generator<MaxValue<T>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
-    ImageParam roi{type_of<uint8_t>(), 2, "roi"};
+    GeneratorInput<Buffer<T>> src{"src", 3};
+    GeneratorInput<Buffer<uint8_t>> roi{"roi", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst{"dst"};
+    GeneratorOutput<Buffer<T>> dst{"dst", 1};
 
-        dst = Element::max_value<T>(src, roi, width, height);
+    void generate() {
+        dst = max_value<T>(src, roi, width, height, depth);
 
-        schedule(src, {width, height});
-        schedule(roi, {width, height});
+        schedule(src, {width, height, depth});
+        schedule(roi, {width, height, depth});
         schedule(dst, {1});
-
-        return dst;
     }
 };
 
