@@ -335,14 +335,15 @@ Func color_interpolation_hsv2rgb(Func in)
     return out;
 }
 
-Func merge3(Func in0, Func in1, Func in2, int32_t width, int32_t height) {
+template<typename T>
+Func merge3(GeneratorInput<Buffer<T>> &in0, GeneratorInput<Buffer<T>> &in1, GeneratorInput<Buffer<T>> &in2, int32_t width, int32_t height) {
     Var x{"x"}, y{"y"}, c{"c"};
     Func merge3{"merge3"};
 
-    merge3(c, x, y) = select(c == 0, in0(x, y),
+    merge3(x, y, c) = select(c == 0, in0(x, y),
                              c == 1, in1(x, y),
                              in2(x, y));
-    merge3.unroll(c);
+    //merge3.unroll(c);
 
     return merge3;
 }
