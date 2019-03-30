@@ -197,17 +197,17 @@ Func min_pos(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int3
 }
 
 template<typename T>
-Func min_value(Func src, Func roi, int32_t width, int32_t height)
+Func min_value(GeneratorInput<Buffer<T>> &src, GeneratorInput<Buffer<uint8_t>> &roi, int32_t width, int32_t height, int32_t depth)
 {
     Var x{"x"};
     Func count{"count"}, dst;
-    RDom r{0, width, 0, height, "r"};
-    r.where(roi(r.x, r.y) != 0);
+    RDom r{0, width, 0, height, 0, depth, "r"};
+    r.where(roi(r.x, r.y, r.z) != 0);
 
-    count(x) = sum(select(roi(r.x, r.y) == 0, 0, 1));
+    count(x) = sum(select(roi(r.x, r.y, r.z) == 0, 0, 1));
     schedule(count, {1});
 
-    dst(x) = cast<T>(select(count(x) == 0, 0, minimum(src(r.x, r.y))));
+    dst(x) = cast<T>(select(count(x) == 0, 0, minimum(src(r.x, r.y, r.z))));
 
     return dst;
 }
