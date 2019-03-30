@@ -3,31 +3,29 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class Merge4 : public Halide::Generator<Merge4<T>> {
 public:
-    ImageParam src0{type_of<T>(), 2, "src0"};
-    ImageParam src1{type_of<T>(), 2, "src1"};
-    ImageParam src2{type_of<T>(), 2, "src2"};
-    ImageParam src3{type_of<T>(), 2, "src3"};
+    GeneratorInput<Buffer<T>> src0{"src0", 2};
+    GeneratorInput<Buffer<T>> src1{"src1", 2};
+    GeneratorInput<Buffer<T>> src2{"src2", 2};
+    GeneratorInput<Buffer<T>> src3{"src3", 2};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
 
-    Func build() {
-        Func dst{"dst"};
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-        dst = Element::merge4(src0, src1, src2, src3, width, height);
+    void generate() {
+        dst = merge4<T>(src0, src1, src2, src3, width, height);
 
         schedule(src0, {width, height});
         schedule(src1, {width, height});
         schedule(src2, {width, height});
         schedule(src3, {width, height});
-        schedule(dst, {4, width, height});
-
-        return dst;
+        schedule(dst, {width, height, 4});
     }
 };
 

@@ -30,14 +30,14 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
         const int width = 1024;
         const int height = 768;
         const std::vector<int32_t> in_extents{width, height};
-        const std::vector<int32_t> out_extents{4, width, height};
+        const std::vector<int32_t> out_extents{width, height, 4};
         Halide::Runtime::Buffer<T> input[N];
         for (int i = 0; i < N; ++i) {
             input[i] = mk_rand_buffer<T>(in_extents);
         }
         auto output = mk_null_buffer<T>(out_extents);
         
-        T expect[N * height * width];
+        T *expect = new T[N * height * width];
         
         // Reference impl.
         // first pass
@@ -54,14 +54,14 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
         for (int y=0; y<height; ++y) {
             for (int x=0; x<width; ++x) {
                 for (int c = 0; c < N; c++) {
-                    T actual = output(c, x, y);
+                    T actual = output(x, y, c);
                     if (expect[y * width * N + x * N + c] != actual) {
                         throw std::runtime_error(format("Error: expect(%d, %d, %d) = %u, actual(%d, %d, %d) = %u", x, y, c, expect[y * width * N + x * N + c], x, y, c, actual).c_str());
                      }
                 }
             }
         }
-
+        delete[] expect;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

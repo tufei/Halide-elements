@@ -348,15 +348,16 @@ Func merge3(GeneratorInput<Buffer<T>> &in0, GeneratorInput<Buffer<T>> &in1, Gene
     return merge3;
 }
 
-Func merge4(Func in0, Func in1, Func in2, Func in3, int32_t width, int32_t height) {
+template<typename T>
+Func merge4(GeneratorInput<Buffer<T>> &in0, GeneratorInput<Buffer<T>> &in1, GeneratorInput<Buffer<T>> &in2, GeneratorInput<Buffer<T>> &in3, int32_t width, int32_t height) {
     Var x{"x"}, y{"y"}, c{"c"};
     Func merge4{"merge4"};
 
-    merge4(c, x, y) = select(c == 0, in0(x, y),
+    merge4(x, y, c) = select(c == 0, in0(x, y),
                              c == 1, in1(x, y),
                              c == 2, in2(x, y),
                              in3(x, y));
-    merge4.unroll(c);
+    //merge4.unroll(c);
 
     return merge4;
 }
