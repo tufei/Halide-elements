@@ -4,25 +4,24 @@
 #include <Element.h>
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class MinPos : public Halide::Generator<MinPos<T>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst{"dst"};
+    GeneratorOutput<Buffer<uint32_t>> dst{"dst", 1};
 
-        dst = Element::min_pos(src, width, height);
+    void generate() {
+        dst = min_pos<T>(src, width, height, depth);
 
-        schedule(src, {width, height});
-        schedule(dst, {2});
-
-        return dst;
+        schedule(src, {width, height, depth});
+        schedule(dst, {3});
     }
 };
 
