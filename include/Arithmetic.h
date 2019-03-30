@@ -165,12 +165,13 @@ Func nor(Func src0, Func src1) {
     return dst;
 }
 
-Func min(Func src0, Func src1)
+template<typename T>
+Func min(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst;
-    dst(x, y) = min(src0(x, y), src1(x, y));
+    dst(x, y, c) = min(src0(x, y, c), src1(x, y, c));
 
     return dst;
 }
