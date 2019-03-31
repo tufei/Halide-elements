@@ -146,12 +146,12 @@ Func div_scalar(GeneratorInput<Buffer<T>> &src, Expr val)
 }
 
 template<typename T>
-Func nand(Func src0, Func src1)
+Func nand(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst;
-    dst(x, y) = ~(src0(x, y) & src1(x, y));
+    dst(x, y, c) = ~(src0(x, y, c) & src1(x, y, c));
 
     return dst;
 }
