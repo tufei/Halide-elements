@@ -117,15 +117,15 @@ Func multiply(Func src1, Func src2)
 }
 
 template<typename T>
-Func mul_scalar(Func src0, Expr val)
+Func mul_scalar(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<float>> &val)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
-    Expr dstval = min(src0(x, y) * val, cast<float>(type_of<T>().max()));
+    Expr dstval = min(src0(x, y, c) * val(c), cast<float>(type_of<T>().max()));
     dstval = max(dstval, 0);
 
     Func dst;
-    dst(x, y) = cast<T>(round(dstval));
+    dst(x, y, c) = cast<T>(round(dstval));
 
     return dst;
 }

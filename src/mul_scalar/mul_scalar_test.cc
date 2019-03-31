@@ -14,7 +14,7 @@
 #include "test_common.h"
 
 template<typename T>
-int test(int (*func)(struct halide_buffer_t *_src_buffer, float _value, struct halide_buffer_t *_dst_buffer))
+int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t *_value, struct halide_buffer_t *_dst_buffer))
 {
     try {
         int ret = 0;
@@ -24,27 +24,29 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, float _value, struct h
         //
         const int width = 1024;
         const int height = 768;
-        const float value = 2.0;
-        const std::vector<int32_t> extents{width, height};
+        const int depth = 3;
+        const std::vector<int32_t> extents{width, height, depth};
+        auto value = mk_rand_buffer<float>({depth});
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
         func(input, value, output);
 
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                T expect = input(x, y);
-                T actual = output(x, y);
-                float f = expect * value;
-                f = std::min(static_cast<float>(std::numeric_limits<T>::max()), f);
-                f = std::max(0.0f, f);
-                expect = round_to_nearest_even<T>(f);
-                if (expect != actual) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d", x, y, expect, x, y, actual).c_str());
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    T expect = input(x, y, c);
+                    T actual = output(x, y, c);
+                    float f = expect * value(c);
+                    f = std::min(static_cast<float>(std::numeric_limits<T>::max()), f);
+                    f = std::max(0.0f, f);
+                    expect = round_to_nearest_even<T>(f);
+                    if (expect != actual) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d", x, y, c, expect, x, y, c, actual).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

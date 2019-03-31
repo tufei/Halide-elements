@@ -4,26 +4,25 @@
 #include <Element.h>
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class MulScalar : public Halide::Generator<MulScalar<T>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
-    Param<float> value{"value", 1};
+    GeneratorInput<Buffer<T>> src{"src", 3};
+    GeneratorInput<Buffer<float>> value{"value", 1};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst{"dst"};
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-        dst = Element::mul_scalar<T>(src, value);
+    void generate() {
+        dst = mul_scalar<T>(src, value);
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
-
-        return dst;
+        schedule(src, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 
