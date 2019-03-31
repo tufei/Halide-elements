@@ -402,10 +402,11 @@ Func average_value(GeneratorInput<Buffer<S>> &src, GeneratorInput<Buffer<uint8_t
     return dst;
 }
 
-Func filter_or(Func src0, Func src1) {
-    Var x{"x"}, y{"y"};
+template<typename T>
+Func filter_or(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1) {
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = src0(x, y) | src1(x, y);
+    dst(x, y, c) = src0(x, y, c) | src1(x, y, c);
 
     return dst;
 }

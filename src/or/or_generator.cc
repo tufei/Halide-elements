@@ -3,28 +3,28 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
-class Or : public Halide::Generator<Or<T>> {
+class OR : public Halide::Generator<OR<T>> {
 public:
-    ImageParam src0{type_of<T>(), 2, "src0"};
-    ImageParam src1{type_of<T>(), 2, "src1"};
+    GeneratorInput<Buffer<T>> src0{"src0", 3};
+    GeneratorInput<Buffer<T>> src1{"src1", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst{"dst"};
-        dst = Element::filter_or(src0, src1);
-        schedule(src0, {width, height});
-        schedule(src1, {width, height});
-        schedule(dst, {width, height});
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-        return dst;
+    void generate() {
+        dst = filter_or<T>(src0, src1);
+        schedule(src0, {width, height, depth});
+        schedule(src1, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 
-HALIDE_REGISTER_GENERATOR(Or<uint8_t>, or_u8);
-HALIDE_REGISTER_GENERATOR(Or<uint16_t>, or_u16);
-HALIDE_REGISTER_GENERATOR(Or<uint32_t>, or_u32);
+HALIDE_REGISTER_GENERATOR(OR<uint8_t>, or_u8);
+HALIDE_REGISTER_GENERATOR(OR<uint16_t>, or_u16);
+HALIDE_REGISTER_GENERATOR(OR<uint32_t>, or_u32);

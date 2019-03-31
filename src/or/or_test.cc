@@ -19,24 +19,26 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer,
     try {
         const int width = 1024;
         const int height = 768;
-        const std::vector<int32_t> extents{width, height};
+        const int depth = 3;
+        const std::vector<int32_t> extents{width, height, depth};
         auto input0 = mk_rand_buffer<T>(extents);
         auto input1 = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
         func(input0, input1, output);
         //for each x and y
-        for (int j=0; j<height; ++j) {
-            for (int i=0; i<width; ++i) {
-                T expect = (input0(i, j) | input1(i, j));
-                T actual = output(i, j);
-                if (expect != actual) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                i, j, expect, i, j, actual));
+        for (int c=0; c<depth; ++c) {
+            for (int j=0; j<height; ++j) {
+                for (int i=0; i<width; ++i) {
+                    T expect = (input0(i, j, c) | input1(i, j, c));
+                    T actual = output(i, j, c);
+                    if (expect != actual) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                    i, j, c, expect, i, j, c, actual));
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e){
         std::cerr << e.what() << std::endl;
         return 1;
