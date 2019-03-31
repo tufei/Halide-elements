@@ -46,13 +46,14 @@ Buffer<> load_bin(const std::string& fname, std::vector<int32_t> *extents)
 }
 
 class MNIST : public Halide::Generator<MNIST> {
-    ImageParam in{Int(32), 4, "in"};
+public:
+    GeneratorInput<Buffer<int32_t>> in{"in", 4};
 
     GeneratorParam<int32_t> batch_size{"batch_size", 1};
 
-public:
-    Func build()
-    {
+    GeneratorOutput<Buffer<float>> prob{"prob", 2};
+
+    void generate() {
         const std::vector<int32_t> input_shape{1, 28, 28, batch_size};
         schedule(in, input_shape);
 
@@ -209,12 +210,11 @@ public:
         schedule(tof, tof_top_shape);
 
         // Softmax
-        Func prob("prob");
+        //Func prob("prob");
         std::vector<int32_t> prob_top_shape;
         prob(i, n) = softmax(tof, tof_top_shape, prob_top_shape)(i, n);
         schedule(prob, prob_top_shape);
-
-        return prob;
     }
 };
+
 HALIDE_REGISTER_GENERATOR(MNIST, mnist)
