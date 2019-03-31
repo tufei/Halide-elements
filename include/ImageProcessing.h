@@ -458,25 +458,25 @@ Func laplacian(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height, int
 }
 
 template<typename T>
-Func prewitt(Func input, int32_t width, int32_t height)
+Func prewitt(GeneratorInput<Buffer<T>> &input, int32_t width, int32_t height, int32_t depth)
 {
-    Var x, y;
+    Var x, y, c;
     Func input_f("input_f");
-    input_f(x, y) = cast<float>(input(x, y));
+    input_f(x, y, c) = cast<float>(input(x, y, c));
 
-    Func clamped = BoundaryConditions::repeat_edge(input_f, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}});
+    Func clamped = BoundaryConditions::repeat_edge(input_f, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}, {0, cast<int32_t>(depth)}});
 
     Func diff_x("diff_x"), diff_y("diff_y");
-    diff_x(x, y) = -clamped(x-1, y-1) + clamped(x+1, y-1) +
-                   -clamped(x-1, y  ) + clamped(x+1, y  ) +
-                   -clamped(x-1, y+1) + clamped(x+1, y+1);
+    diff_x(x, y, c) = -clamped(x-1, y-1, c) + clamped(x+1, y-1, c) +
+                   -clamped(x-1, y, c) + clamped(x+1, y, c) +
+                   -clamped(x-1, y+1, c) + clamped(x+1, y+1, c);
 
-    diff_y(x, y) = -clamped(x-1, y-1) + clamped(x-1, y+1) +
-                   -clamped(x  , y-1) + clamped(x  , y+1) +
-                   -clamped(x+1, y-1) + clamped(x+1, y+1);
+    diff_y(x, y, c) = -clamped(x-1, y-1, c) + clamped(x-1, y+1, c) +
+                   -clamped(x, y-1, c) + clamped(x, y+1, c) +
+                   -clamped(x+1, y-1, c) + clamped(x+1, y+1, c);
 
     Func output("output");
-    output(x, y) = cast<T>(hypot(diff_x(x, y), diff_y(x, y)));
+    output(x, y, c) = cast<T>(hypot(diff_x(x, y, c), diff_y(x, y, c)));
 
     return output;
 }

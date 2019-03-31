@@ -5,25 +5,24 @@
 #include "ImageProcessing.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class Prewitt : public Generator<Prewitt<T>> {
 public:
-    ImageParam input{type_of<T>(), 2, "input"};
+    GeneratorInput<Buffer<T>> input{"input", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func output{"output"};
+    GeneratorOutput<Buffer<T>> output{"output", 3};
 
-        output = Element::prewitt<T>(input, width, height);
+    void generate() {
+        output = prewitt<T>(input, width, height, depth);
 
-        schedule(input, {width, height});
-        schedule(output, {width, height});
-
-        return output;
+        schedule(input, {width, height, depth});
+        schedule(output, {width, height, depth});
     }
 
 };
