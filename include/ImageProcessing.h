@@ -725,9 +725,9 @@ Func scale_NN(Func src, int32_t in_width, int32_t in_height, int32_t out_width, 
 }
 
 template <typename T>
-Func scale_bicubic(Func src, int32_t in_width, int32_t in_height, int32_t out_width, int32_t out_height)
+Func scale_bicubic(GeneratorInput<Buffer<T>> &src, int32_t in_width, int32_t in_height, int32_t out_width, int32_t out_height, int32_t depth)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
 
     ////////////////////////////////////////////////////////////////////////////
@@ -768,7 +768,7 @@ Func scale_bicubic(Func src, int32_t in_width, int32_t in_height, int32_t out_wi
     Func weight, value, totalWeight;
     Expr alpha = -1.0f;
 
-    Expr iX = select(r.x > diffx, cast<float>( r.x - diffx), cast<float>(diffx - r.x) );
+    Expr iX = select(r.x > diffx, cast<float>(r.x - diffx), cast<float>(diffx - r.x));
     Expr iY = select(r.y > diffy, cast<float>(r.y - diffy), cast<float>(diffy - r.y));
     Expr iX2 = iX * iX;
     Expr iX3 = iX * iX * iX;
@@ -782,21 +782,22 @@ Func scale_bicubic(Func src, int32_t in_width, int32_t in_height, int32_t out_wi
                     0.0f);
 
     Expr tmp = cast<float>(iX * iY);
-    Func clamped = BoundaryConditions::repeat_edge(src, 0, in_width, 0, in_height);
-    value(x, y) = sum(cast<double>(tmp*clamped(cast<int>(srcx + r.x), cast<int>(srcy + r.y))));
+    Func clamped = BoundaryConditions::repeat_edge(src, 0, in_width, 0, in_height, 0, depth);
+    value(x, y, c) = sum(cast<double>(tmp*clamped(cast<int>(srcx + r.x), cast<int>(srcy + r.y), c)));
 
     totalWeight(x, y) = sum(tmp);
-    totalWeight(x, y) = select(totalWeight(x,y) < 0, -totalWeight(x, y), totalWeight(x,y));
+    totalWeight(x, y) = select(totalWeight(x, y) < 0, -totalWeight(x, y), totalWeight(x, y));
 
-    value(x,y) = select(totalWeight(x,y) ==cast<double>(0.0f), cast<double>(0.5f),
-                        value(x,y)/cast<double>(totalWeight(x, y)) +cast<double>(0.5f));
-    dst(x, y) = cast<T>(clamp(value(x,y),
+    value(x, y, c) = select(totalWeight(x, y) ==cast<double>(0.0f), cast<double>(0.5f),
+                        value(x, y, c)/cast<double>(totalWeight(x, y)) +cast<double>(0.5f));
+    dst(x, y, c) = cast<T>(clamp(value(x, y, c),
                               cast<double>(type_of<T>().min()),
                               cast<double>(type_of<T>().max())));
 
-    schedule(value, {out_width, out_height});
+    schedule(value, {out_width, out_height, depth});
     schedule(totalWeight, {out_width, out_height});
-    schedule(dst, {out_width, out_height});
+    schedule(dst, {out_width, out_height, depth});
+
     return dst;
 }
 

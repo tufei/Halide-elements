@@ -5,11 +5,12 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class ScaleBicubic : public Halide::Generator<ScaleBicubic<T>> {
-    ImageParam src{type_of<T>(), 2, "src"};
+public:
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
     GeneratorParam<int32_t> in_width{"in_width", 1024};
     GeneratorParam<int32_t> in_height{"in_height", 768};
@@ -17,14 +18,15 @@ class ScaleBicubic : public Halide::Generator<ScaleBicubic<T>> {
     GeneratorParam<int32_t> out_width{"out_width", 500};
     GeneratorParam<int32_t> out_height{"out_height", 500};
 
-public:
-    Func build() {
-        Func dst{"dst"};
-        dst = Element::scale_bicubic<T>(src, in_width, in_height,out_width, out_height);
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-        schedule(src, {in_width, in_height});
-        schedule(dst, {out_width, out_height});
-        return dst;
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
+
+    void generate() {
+        dst = scale_bicubic<T>(src, in_width, in_height,out_width, out_height, depth);
+
+        schedule(src, {in_width, in_height, depth});
+        schedule(dst, {out_width, out_height, depth});
     }
 };
 
