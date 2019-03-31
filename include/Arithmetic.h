@@ -106,12 +106,13 @@ Func average(GeneratorInput<Buffer<T>> &src, int32_t window_width, int32_t windo
     return dst;
 }
 
-Func multiply(Func src1, Func src2)
+template<typename T>
+Func multiply(GeneratorInput<Buffer<T>> &src1, GeneratorInput<Buffer<T>> &src2)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst;
-    dst(x, y) = src1(x, y) * src2(x, y);
+    dst(x, y, c) = src1(x, y, c) * src2(x, y, c);
 
     return dst;
 }
