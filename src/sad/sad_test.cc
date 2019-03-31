@@ -23,34 +23,37 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer1,
     try {
         int ret = 0;
         constexpr unsigned int N = 2; 
-		typedef int64_t S;
+        typedef int64_t S;
 		
         //
         // Run
         //
         const int width = 1024;
         const int height = 768;
+        const int depth = 3;
         //const int width = 10;
         //const int height = 8;
-        const std::vector<int32_t> in_extents{width, height};
-        const std::vector<int32_t> out_extents{width, height};
+        const std::vector<int32_t> in_extents{width, height, depth};
+        const std::vector<int32_t> out_extents{width, height, depth};
         Halide::Runtime::Buffer<T> input[N];
         for (int i = 0; i < N; ++i) {
             input[i] = mk_rand_buffer<T>(in_extents);
         }
         auto output = mk_null_buffer<T>(out_extents);
         
-        T expect[height * width];
+        T *expect = new T[height * width * depth];
         
         // Reference impl.
-		// first pass
-		for (int j = 0; j < height; j++) {
-			for (int i = 0; i < width; i++) {
-				S diff = static_cast<S>(input[0](i,j)) -
-					static_cast<S>(input[1](i,j));
-				expect[j * width + i] = static_cast<T>(diff < 0 ? -diff : diff);
-			}
-		}
+        // first pass
+        for (int c = 0; c < depth; c++) {
+            for (int j = 0; j < height; j++) {
+              for (int i = 0; i < width; i++) {
+                S diff = static_cast<S>(input[0](i,j,c)) -
+                  static_cast<S>(input[1](i,j,c));
+                expect[(j * width + i) * depth + c] = static_cast<T>(diff < 0 ? -diff : diff);
+              }
+            }
+        }
 
         func(input[0], input[1], output);
 
@@ -86,15 +89,17 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer1,
 //			cout << endl;
 //        }
 
-        for (int y=0; y<height; ++y) {
-			for (int x=0; x<width; ++x) {
-				T actual = output(x,y);
-				if (expect[y * width + x] != actual) {
-					throw std::runtime_error(format("Error: expect(%d, %d) = %u, actual(%d, %d) = %u, input0=%d,input1=%d", x, y, expect[y * width + x], x, y, actual,input[0](x,y),input[1](x,y)).c_str());
-				}
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    T actual = output(x,y,c);
+                    if (expect[(y * width + x) * depth + c] != actual) {
+                      throw std::runtime_error(format("Error: expect(%d, %d, %d) = %u, actual(%d, %d, %d) = %u, input0=%d,input1=%d", x, y, c, expect[(y * width + x) * depth + c], x, y, c, actual,input[0](x,y,c),input[1](x,y,c)).c_str());
+                    }
+                }
             }
         }
-
+        delete[] expect;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
