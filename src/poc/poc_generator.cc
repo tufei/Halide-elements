@@ -10,14 +10,16 @@ using namespace Halide::Element;
 
 class POC : public Generator<POC> {
 public:
-    ImageParam input1{Float(32), 2, "input1"};
-    ImageParam input2{Float(32), 2, "input2"};
+    GeneratorInput<Buffer<float>> input1{"intpu1", 2};
+    GeneratorInput<Buffer<float>> input2{"intpu2", 2};
 
     GeneratorParam<int32_t> n_{"n", 16};
     GeneratorParam<int32_t> batch_size_{"batch_size", 16};
 
     Var c{"c"}, i{"i"}, k{"k"}, h{"h"};
     Var x{"x"}, y{"y"};
+
+    GeneratorOutput<Buffer<float>> func_poc{"func_poc", 2};
 
     ComplexExpr fft2(ComplexExpr a) {
         const int32_t n = static_cast<int32_t>(n_);
@@ -51,7 +53,7 @@ public:
         return ifft_a;
     }
 
-    Func build() {
+    void generate() {
         const int32_t n = static_cast<int32_t>(n_);
 
         Expr w = sqrt((x / (float)n - 0.5f) * (x / (float)n - 0.5f) + (y / (float)n - 0.5f) * (y / (float)n - 0.5f));
@@ -69,14 +71,11 @@ public:
 
         ComplexExpr ifft_r_n = ifft2(r_normal);
 
-        Func func_poc("func_poc");
         func_poc(x, y) = ifft_r_n.x;
 
         schedule(input1, {n, n});
         schedule(input2, {n, n});
         schedule(func_poc, {n, n});
-
-        return func_poc;
     }
 };
 

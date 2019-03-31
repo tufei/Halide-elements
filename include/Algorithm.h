@@ -30,7 +30,7 @@ Expr bit_reverse(Expr i, const int n)
     return ri;
 }
 
-Func fft(GeneratorInput<Buffer<float>> &in, const int32_t n, const int32_t batch_size)
+Func fft(Func in, const int32_t n, const int32_t batch_size)
 {
     Var c{"c"}, i{"i"}, k{"k"};
 
@@ -81,6 +81,12 @@ Func fft(GeneratorInput<Buffer<float>> &in, const int32_t n, const int32_t batch
     schedule(weight, {2, n/2});
 
     return out;
+}
+
+Func fft(GeneratorInput<Buffer<float>> &in, const int32_t n, const int32_t batch_size)
+{
+    Func src = in;
+    return fft(src, n, batch_size);
 }
 
 template<typename T>
