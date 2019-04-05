@@ -19,21 +19,23 @@ int test(int (*func)(T _value, struct halide_buffer_t *_dst_buffer)) {
     try {
         const int width = 1024;
         const int height = 768;
-        const std::vector<int32_t> extents{width, height};
+        const int depth = 3;
+        const std::vector<int32_t> extents{width, height, depth};
         const T value = mk_rand_scalar<T>(); //input scalar
         auto output = mk_null_buffer<T>(extents);
 
         func(value, output);
         //for each x and y
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                if (value != output(x, y)) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                    x, y, value, x, y, output(x, y)).c_str());
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    if (value != output(x, y, c)) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                        x, y, c, value, x, y, c, output(x, y, c)).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

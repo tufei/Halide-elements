@@ -579,9 +579,9 @@ Func tm_zncc(Func src0, Func src1, const int32_t img_width, const int32_t img_he
 
 Func set_scalar(Expr val)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = val;
+    dst(x, y, c) = val;
 
     return dst;
 }
