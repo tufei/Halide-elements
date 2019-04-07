@@ -5,16 +5,19 @@ using namespace Halide;
 using namespace Halide::Element;
 
 class SimpleISP : public Halide::Generator<SimpleISP> {
-    ImageParam in{UInt(16), 2, "in"};
-    Param<uint16_t> optical_black_value{"optical_black_value", 0};
-    Param<float> gamma_value{"gamma_value", 1.0f};
-    Param<float> saturation_value{"saturation_value", 1.0f};
+public:
+    GeneratorInput<Buffer<uint16_t>> in{"in", 2};
+
+    GeneratorInput<uint16_t> optical_black_value{"optical_black_value", 0};
+    GeneratorInput<float> gamma_value{"gamma_value", 1.0f};
+    GeneratorInput<float> saturation_value{"saturation_value", 1.0f};
 
     GeneratorParam<int32_t> width{"width", 3280};
     GeneratorParam<int32_t> height{"height", 2486};
 
-public:
-    Func build()
+    GeneratorOutput<Buffer<uint8_t>> out{"out", 3};
+
+    void generate()
     {
         constexpr uint32_t frac_bits = 10;
 
@@ -42,15 +45,12 @@ public:
         Func f5("color_interpolation_hsv2rgb");
         f5(c, x, y) = color_interpolation_hsv2rgb<frac_bits>(f4)(c, x, y);
 
-        Func out("out");
         out(c, x, y) = select(c == 3, 0, denormalize<frac_bits>(f5)(c, x, y));
 
         schedule(in, {w, h});
         schedule(f2, {3, w, h}).unroll(c);
         schedule(f4, {3, w, h}).unroll(c);
-        schedule(out, {4, w, h}).unroll(c);
-
-        return out;
+        //schedule(out, {4, w, h}).unroll(c);
     }
 };
 

@@ -163,7 +163,7 @@ Func convolution(GeneratorInput<Buffer<TI>> &in, int32_t width, int32_t height, 
 }
 
 template<uint32_t frac_bits>
-Func gamma_correction(Func in, Param<float> value)
+Func gamma_correction(Func in, GeneratorInput<float> &value)
 {
     Var x, y, c;
 
@@ -173,7 +173,7 @@ Func gamma_correction(Func in, Param<float> value)
     return out;
 }
 
-Func optical_black_clamp(Func in, Param<uint16_t> clamp_value)
+Func optical_black_clamp(Func in, GeneratorInput<uint16_t> &clamp_value)
 {
     Var x, y;
     Func out;
@@ -190,7 +190,7 @@ Fixed<int16_t, frac_bits> to_fixed16(Expr e)
 }
 
 template<uint32_t frac_bits>
-Func saturation_adjustment(Func in, Param<float> value)
+Func saturation_adjustment(Func in, GeneratorInput<float> &value)
 {
     Var x, y, c;
 
