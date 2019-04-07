@@ -41,38 +41,39 @@ private:
     Expr visit(const Variable *v) {
 
         std::string var_name = v->name;
+        Expr e = v;
 
         if (internal.contains(var_name)) {
             // Don't capture internally defined vars
-            return v;
+            return e;
         }
 
         if (v->reduction_domain.defined()) {
             if (v->reduction_domain.same_as(rdom.domain())) {
                 // This variable belongs to the explicit reduction domain, so
                 // skip it.
-                return v;
+                return e;
             } else {
                 // This should be converted to a pure variable and
                 // added to the free vars list.
                 var_name = unique_name('v');
-                return Variable::make(v->type, var_name);
+                e = Variable::make(v->type, var_name);
             }
         }
 
         if (v->param.defined()) {
             // Skip parameters
-            return v;
+            return e;
         }
 
         for (size_t i = 0; i < free_vars.size(); i++) {
-            if (var_name == free_vars[i].name()) return v;
+            if (var_name == free_vars[i].name()) return e;
         }
 
         free_vars.push_back(Var(var_name));
         call_args.push_back(v);
 
-        return v;
+        return e;
     }
 };
 

@@ -6,27 +6,25 @@ using namespace Halide::Element;
 
 class SGM : public Halide::Generator<SGM> {
 public:
-    ImageParam in_l{UInt(8), 2, "in_l"};
-    ImageParam in_r{UInt(8), 2, "in_r"};
+    GeneratorInput<Buffer<uint8_t>> in_l{"in_l", 2};
+    GeneratorInput<Buffer<uint8_t>> in_r{"in_r", 2};
 
     GeneratorParam<int32_t> disp{"disp", 16};
     GeneratorParam<int32_t> width{"width", 641};
     GeneratorParam<int32_t> height{"height", 555};
 
-    Func build()
-    {
-        Func out{"out"};
+    GeneratorOutput<Buffer<uint8_t>> dst{"dst", 2};
 
-        out = semi_global_matching(in_l, in_r, width, height, disp);
+    void generate()
+    {
+        Func src_l = in_l;
+        Func src_r = in_r;
+        dst = semi_global_matching(src_l, src_r, width, height, disp);
 
         schedule(in_l, {width, height});
         schedule(in_r, {width, height});
-        schedule(out, {width, height});
-
-        return out;
+        schedule(dst, {width, height});
     }
-
-private:
-
 };
+
 HALIDE_REGISTER_GENERATOR(SGM, sgm)
