@@ -8,21 +8,20 @@ using namespace Halide::Element;
 template<typename T>
 class Sobel : public Generator<Sobel<T>> {
 public:
+    GeneratorInput<Buffer<T>> input{"input", 3};
+
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
-    ImageParam input{type_of<T>(), 2, "input"};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func output{"output"};
+    GeneratorOutput<Buffer<T>> output{"output", 3};
 
-        output = Element::sobel<T>(input, width, height);
+    void generate() {
+        output = sobel<T>(input, width, height, depth);
 
-        schedule(input, {width, height});
-        schedule(output, {width, height});
-
-        return output;
+        schedule(input, {width, height, depth});
+        schedule(output, {width, height, depth});
     }
-
 };
 
 HALIDE_REGISTER_GENERATOR(Sobel<uint8_t>, sobel_u8);
