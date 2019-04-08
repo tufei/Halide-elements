@@ -3,23 +3,23 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class Split3 : public Halide::Generator<Split3<T>> {
 public:
-    ImageParam src{type_of<T>(), 3, "src"};
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
 
-    Func build() {
-        Func dst;
-        dst = Element::split3(src, width, height);
+    GeneratorOutput<Buffer<>> dst{"dst", {type_of<T>(), type_of<T>(), type_of<T>()}, 2};
 
-        schedule(src, {3, width, height});
-        schedule(dst, {width, height});
-        return dst;
+    void generate() {
+        dst = split3<T>(src, width, height);
+
+        schedule(src, {width, height, 3});
+        //schedule(dst, {width, height});
     }
 };
 
