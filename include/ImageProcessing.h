@@ -587,7 +587,7 @@ Func set_scalar(Expr val)
 }
 
 template <typename T>
-Func split3(GeneratorInput<Buffer<T>> &src, int32_t widthe, int32_t height)
+Func split3(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height)
 {
     Var x{"x"}, y{"y"};
     Func dst{"dst"};
@@ -597,11 +597,13 @@ Func split3(GeneratorInput<Buffer<T>> &src, int32_t widthe, int32_t height)
     return dst;
 }
 
-Func split4(Func src, int32_t widthe, int32_t height)
+template <typename T>
+Func split4(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height)
 {
     Var x{"x"}, y{"y"};
     Func dst{"dst"};
-    dst(x, y) = Tuple(src(0, x, y), src(1, x, y), src(2, x, y), src(3, x, y));
+
+    dst(x, y) = Tuple(src(x, y, 0), src(x, y, 1), src(x, y, 2), src(x, y, 3));
 
     return dst;
 }

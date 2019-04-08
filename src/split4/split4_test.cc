@@ -25,20 +25,21 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
         constexpr unsigned int N = 4;
         const int width = 1024;
         const int height = 768;
-        const std::vector<int32_t> in_extents{N, width, height};
+        const std::vector<int32_t> in_extents{width, height, N};
         const std::vector<int32_t> out_extents{width, height};
         auto input = mk_null_buffer<T>(in_extents);
         Halide::Runtime::Buffer<T> output[N];
         for (int i = 0; i < N; ++i) {
             output[i] = mk_rand_buffer<T>(out_extents);
         }
-        T expect[N][height * width]; //expected output: 4 h*w images
+        T *tmp = new T[width * height * N];
+        T (*expect)[height][N] = reinterpret_cast<T (*)[height][N]>(tmp);
 
         //ref
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
                 for (int c = 0; c < N; c++) {
-                    expect[c][y * width+ x] = input(c, x, y);
+                    expect[x][y][c] = input(x, y, c);
                 }
             }
         }
@@ -48,13 +49,14 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
             for (int x=0; x<width; ++x) {
                 for (int c = 0; c < N; c++) {
                     T actual = output[c](x, y);
-                    if (expect[c][y * width + x] != actual) {
+                    if (expect[x][y][c] != actual) {
                         throw std::runtime_error(format("Error: expect(%d, %d, %d) = %u, actual(%d, %d, %d) = %u",
-                                                        x, y, c, expect[c][y * width + x], x, y, c, actual).c_str());
+                                                        x, y, c, expect[x][y][c], x, y, c, actual).c_str());
                      }
                 }
             }
         }
+        delete[] tmp;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
