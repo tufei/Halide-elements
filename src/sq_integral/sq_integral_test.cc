@@ -22,20 +22,23 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
     try {
         const int width = 1024;
         const int height = 768;
-        const std::vector<int32_t> extents{width, height};
+        const int depth = 3;
+        const std::vector<int32_t> extents{width, height, depth};
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<D>(extents);
         auto expect = mk_null_buffer<D>(extents);
 
         // ref expect
-        for (int i = 0; i < height; i++){
-            D sum = 0;
-            for (int j = 0; j < width; ++j) {
-                sum += static_cast<D>(input(j, i)) * static_cast<D>(input(j, i));
-                if(i > 0){
-                    expect(j , i) = sum + expect(j, i-1);
-                }else{
-                    expect(j , i) = sum;
+        for (int c = 0; c < depth; c++) {
+            for (int i = 0; i < height; i++) {
+                D sum = 0;
+                for (int j = 0; j < width; ++j) {
+                    sum += static_cast<D>(input(j, i, c)) * static_cast<D>(input(j, i, c));
+                    if(i > 0){
+                        expect(j, i, c) = sum + expect(j, i-1, c);
+                    }else{
+                        expect(j, i, c) = sum;
+                    }
                 }
             }
         }
@@ -43,14 +46,15 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         func(input, output);
 
         // for each x and y
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                if (expect(x, y) != output(x, y)) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %f, actual(%d, %d) = %f", x, y, expect(x, y), x, y, output(x,y)).c_str());
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    if (expect(x, y, c) != output(x, y, c)) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %f, actual(%d, %d, %d) = %f", x, y, c, expect(x, y, c), x, y, c, output(x, y, c)).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
