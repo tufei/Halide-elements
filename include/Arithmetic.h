@@ -347,11 +347,12 @@ Func histogram2d(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src
 }
 
 template<typename T>
-Func sub(Func src0, Func src1)
+Func sub(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = cast<T>(select(src0(x, y) > src1(x,y), src0(x, y)-src1(x,y), 0));
+    dst(x, y, c) = cast<T>(select(src0(x, y, c) > src1(x, y, c), src0(x, y, c) - src1(x, y, c), 0));
+
     return dst;
 }
 

@@ -3,29 +3,29 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
-class Sub : public Halide::Generator<Sub<T>> {
-    ImageParam src0{type_of<T>(), 2, "src0"};
-    ImageParam src1{type_of<T>(), 2, "src1"};
+class SUB : public Halide::Generator<SUB<T>> {
+public:
+    GeneratorInput<Buffer<T>> src0{"src0", 3};
+    GeneratorInput<Buffer<T>> src1{"src1", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-public:
-    Func build() {
-        Func dst{"dst"};
-        dst =  Element::sub<T>(src0, src1);
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
+
+    void generate() {
+        dst = sub<T>(src0, src1);
         
-        schedule(src0, {width, height});
-        schedule(src1, {width, height});
-        schedule(dst, {width, height});
-
-        return dst;
+        schedule(src0, {width, height, depth});
+        schedule(src1, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 
-HALIDE_REGISTER_GENERATOR(Sub<uint8_t>, sub_u8);
-HALIDE_REGISTER_GENERATOR(Sub<uint16_t>, sub_u16);
-HALIDE_REGISTER_GENERATOR(Sub<uint32_t>, sub_u32);
+HALIDE_REGISTER_GENERATOR(SUB<uint8_t>, sub_u8);
+HALIDE_REGISTER_GENERATOR(SUB<uint16_t>, sub_u16);
+HALIDE_REGISTER_GENERATOR(SUB<uint32_t>, sub_u32);
