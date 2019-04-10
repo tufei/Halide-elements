@@ -5,24 +5,25 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class SubScalar : public Halide::Generator<SubScalar<T>> {
 public:
-    ImageParam src{type_of<T>(), 2, "src"};
-    Param<double> value{"value", 1};
+    GeneratorInput<Buffer<T>> src{"src", 3};
+    GeneratorInput<double> value{"value", 1};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst{"dst"};
-        dst = Element::sub_scalar<T>(src, value);
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
-        return dst;
+    void generate() {
+        dst = sub_scalar<T>(src, value);
+
+        schedule(src, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 

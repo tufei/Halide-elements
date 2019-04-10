@@ -382,11 +382,12 @@ Func sq_integral(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, 
 
 
 template<typename T>
-Func sub_scalar(Func src, Expr val)
+Func sub_scalar(GeneratorInput<Buffer<T>> &src, Expr val)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = cast<T>(clamp(round(cast<double>(src(x, y)) - val), 0, cast<double>(type_of<T>().max())));
+
+    dst(x, y, c) = cast<T>(clamp(round(cast<double>(src(x, y, c)) - val), 0, cast<double>(type_of<T>().max())));
 
     return dst;
 }

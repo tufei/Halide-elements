@@ -20,8 +20,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, double _value, struct 
     try {
         const int width = 1024;
         const int height = 768;
+        const int depth = 3;
         const double value = mk_rand_scalar<double>();
-        const std::vector<int32_t> extents{width, height};
+        const std::vector<int32_t> extents{width, height, depth};
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
@@ -29,15 +30,17 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, double _value, struct 
         const double max_value = static_cast<double>(std::numeric_limits<T>::max());
 
         //for each x and y
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                T actual = output(x, y);
-                double diff = std::max(static_cast<double>(0.0f), static_cast<double>(input(x, y)) - value);
-                T expect = round_to_nearest_even<T>(std::min(diff, max_value));
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    T actual = output(x, y, c);
+                    double diff = std::max(static_cast<double>(0.0f), static_cast<double>(input(x, y, c)) - value);
+                    T expect = round_to_nearest_even<T>(std::min(diff, max_value));
 
-                if (expect != actual) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                    x, y, expect, x, y, actual).c_str());
+                    if (expect != actual) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                        x, y, c, expect, x, y, c, actual).c_str());
+                    }
                 }
             }
         }
