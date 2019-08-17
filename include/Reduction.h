@@ -12,7 +12,7 @@ namespace Element {
 //
 namespace {
 using namespace Halide::Internal;
-class FindFreeVars : public IRMutator2 {
+class FindFreeVars : public IRMutator {
 public:
     std::vector<Var> free_vars;
     std::vector<Expr> call_args;
@@ -23,7 +23,7 @@ public:
 private:
     Scope<int> internal;
 
-    using IRMutator2::visit;
+    using IRMutator::visit;
 
     Expr visit(const Let *op) {
         Expr value = mutate(op->value);
