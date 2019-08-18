@@ -4,25 +4,24 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T, typename D>
 class Sum : public Halide::Generator<Sum<T, D>> {
 public:
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
-    ImageParam src{type_of<T>(), 2, "src"};
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-    Func build() {
-        Func dst{"dst"};
+    GeneratorOutput<Buffer<D>> dst{"dst", 3};
 
-        dst = Element::sum<T, D>(src, width, height);
+    void generate() {
+        dst = sum<T, D>(src, width, height, depth);
 
-        schedule(src, {width, height});
-        schedule(dst, {1, 1});
-
-        return dst;
+        schedule(src, {width, height, depth});
+        schedule(dst, {1, 1, depth});
     }
 };
 

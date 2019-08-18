@@ -25,15 +25,15 @@ Func sq_sum(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32
 }
 
 template<typename T, typename D>
-Func sum(ImageParam src, int32_t width, int32_t height)
+Func sum(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst("sum");
 
     RDom r(0, width, 0, height);
 
-    dst(x, y) = cast<D>(sum(cast<typename SumType<T>::type>(src(r.x, r.y))));
+    dst(x, y, c) = cast<D>(sum(cast<typename SumType<T>::type>(src(r.x, r.y, c))));
 
     return dst;
 }

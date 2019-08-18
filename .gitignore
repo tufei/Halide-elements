@@ -34,3 +34,6 @@
 # Visual Studio Code
 .vscode
 *.code-workspace
+
+# Editor swap file
+*.swp
