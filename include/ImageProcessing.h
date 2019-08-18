@@ -1066,11 +1066,11 @@ Func warp_affine_bicubic(Func src, int32_t border_type, Expr border_value, Func 
 }
 
 template <typename T>
-Func threshold_min(Func src, Expr threshold)
+Func threshold_min(GeneratorInput<Buffer<T>> &src, Expr threshold)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = select (src(x, y) > threshold, threshold, src(x,y));
+    dst(x, y, c) = select (src(x, y, c) > threshold, threshold, src(x, y, c));
 
     return dst;
 }

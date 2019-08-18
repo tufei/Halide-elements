@@ -16,12 +16,14 @@ template<typename T>
 Halide::Runtime::Buffer<T>& min_ref(Halide::Runtime::Buffer<T>& dst,
                                 const Halide::Runtime::Buffer<T>& src,
                                 const int32_t width, const int32_t height,
-                                const T threshold)
+                                const int32_t depth, const T threshold)
 {
-    for(int y=0; y<height; y++){
-        for(int x=0; x<width; x++){
-            T val = src(x, y);
-            dst(x, y) = val > threshold ? threshold : val;
+    for(int c=0; c<depth; c++) {
+        for(int y=0; y<height; y++){
+            for(int x=0; x<width; x++){
+                T val = src(x, y, c);
+                dst(x, y, c) = val > threshold ? threshold : val;
+            }
         }
     }
     return dst;
@@ -35,7 +37,8 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
     try {
         const int width = 1024;
         const int height = 768;
-        const std::vector<int32_t> extents{width, height};
+        const int depth = 3;
+        const std::vector<int32_t> extents{width, height, depth};
 
         const T threshold = mk_rand_scalar<T>();
         auto input = mk_rand_buffer<T>(extents);
@@ -43,19 +46,20 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
 
         func(input, threshold, output);
         auto expect = mk_rand_buffer<T>(extents);
-        expect = min_ref(expect, input, width, height, threshold);
+        expect = min_ref(expect, input, width, height, depth, threshold);
 
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                T actual = output(x, y);
-                if (expect(x, y) != actual) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                 x, y, expect(x, y), x, y, actual).c_str());
-                 }
+        for (int c=0; c<depth; ++c) {
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    T actual = output(x, y, c);
+                    if (expect(x, y, c) != actual) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                     x, y, c, expect(x, y, c), x, y, c, actual).c_str());
+                     }
 
+                }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
