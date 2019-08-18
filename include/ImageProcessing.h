@@ -509,16 +509,16 @@ Func sobel(GeneratorInput<Buffer<T>> &input, int32_t width, int32_t height, int3
 }
 
 template <typename T>
-Func tm_ssd(Func src0, Func src1, const int32_t img_width, const int32_t img_height, const int32_t tmp_width, const int32_t tmp_height)
+Func tm_ssd(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, const int32_t img_width, const int32_t img_height, const int32_t tmp_width, const int32_t tmp_height)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
 
     RDom r(0, tmp_width, 0, tmp_height);
 
     Func out{"out"};
     Expr diff{"diff"};
-    diff = cast<double>(src0(x + r.x, y + r.y)) - cast<double>(src1(r.x, r.y));
-    out(x, y) = sum(diff * diff);
+    diff = cast<double>(src0(x + r.x, y + r.y, c)) - cast<double>(src1(r.x, r.y));
+    out(x, y, c) = sum(diff * diff);
 
     return out;
 }
