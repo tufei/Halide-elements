@@ -1076,11 +1076,11 @@ Func threshold_min(Func src, Expr threshold)
 }
 
 template <typename T>
-Func threshold_max(Func src, Expr threshold)
+Func threshold_max(GeneratorInput<Buffer<T>> &src, Expr threshold)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = select (src(x, y) > threshold, src(x,y), threshold);
+    dst(x, y, c) = select (src(x, y, c) > threshold, src(x, y, c), threshold);
 
     return dst;
 }
