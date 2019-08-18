@@ -24,21 +24,24 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_
         //
         const int img_width = 1024;
         const int img_height = 768;
+        const int img_depth = 3;
         const int tmp_width = 16;
         const int tmp_height = 16;
         const int res_width = img_width - tmp_width + 1;
         const int res_height = img_height - tmp_height + 1;
-        const std::vector<int32_t> img_extents{img_width, img_height};
+        const std::vector<int32_t> img_extents{img_width, img_height, img_depth};
         const std::vector<int32_t> tmp_extents{tmp_width, tmp_height};
-        const std::vector<int32_t> res_extents{res_width, res_height};
+        const std::vector<int32_t> res_extents{res_width, res_height, img_depth};
         auto input0 = mk_rand_buffer<T>(img_extents);
         auto input1 = mk_rand_buffer<T>(tmp_extents);
         auto output = mk_null_buffer<double>(res_extents);
 
         if (typeid(T) == typeid(uint32_t)) {
-            for (int y=0; y<img_height; ++y) {
-                for (int x=0; x<img_width; ++x) {
-                    input0(x, y) = static_cast<T>(input0(x, y) / 10000000);
+            for (int c=0; c<img_depth; ++c) {
+                for (int y=0; y<img_height; ++y) {
+                    for (int x=0; x<img_width; ++x) {
+                        input0(x, y, c) = static_cast<T>(input0(x, y, c) / 10000000);
+                    }
                 }
             }
             for (int y=0; y<tmp_height; ++y) {
@@ -51,38 +54,39 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_
         func(input0, input1, output);
 
         const double tmp_size = static_cast<double>(tmp_width * tmp_height);
-        for (int y=0; y<res_height; ++y) {
-            for (int x=0; x<res_width; ++x) {
-                double avr0 = 0.0;
-                double avr1 = 0.0;
-                for (int tmp_y=0; tmp_y<tmp_height; ++tmp_y) {
-                    for (int tmp_x=0; tmp_x<tmp_width; ++tmp_x) {
-                        avr0 += static_cast<double>(input0(x+tmp_x, y+tmp_y));
-                        avr1 += static_cast<double>(input1(tmp_x, tmp_y));
+        for (int c=0; c<img_depth; ++c) {
+            for (int y=0; y<res_height; ++y) {
+                for (int x=0; x<res_width; ++x) {
+                    double avr0 = 0.0;
+                    double avr1 = 0.0;
+                    for (int tmp_y=0; tmp_y<tmp_height; ++tmp_y) {
+                        for (int tmp_x=0; tmp_x<tmp_width; ++tmp_x) {
+                            avr0 += static_cast<double>(input0(x+tmp_x, y+tmp_y, c));
+                            avr1 += static_cast<double>(input1(tmp_x, tmp_y));
+                        }
                     }
-                }
-                avr0 = avr0 / tmp_size;
-                avr1 = avr1 / tmp_size;
+                    avr0 = avr0 / tmp_size;
+                    avr1 = avr1 / tmp_size;
 
-                double sum1 = 0.0;
-                double sum2 = 0.0;
-                double sum3 = 0.0;
-                for (int tmp_y=0; tmp_y<tmp_height; ++tmp_y) {
-                    for (int tmp_x=0; tmp_x<tmp_width; ++tmp_x) {
-                        sum1 += static_cast<double>(input0(x+tmp_x, y+tmp_y)-avr0) * static_cast<double>(input1(tmp_x, tmp_y)-avr1);
-                        sum2 += static_cast<double>(input0(x+tmp_x, y+tmp_y)-avr0) * static_cast<double>(input0(x+tmp_x, y+tmp_y)-avr0);
-                        sum3 += static_cast<double>(input1(tmp_x, tmp_y)-avr1) * static_cast<double>(input1(tmp_x, tmp_y)-avr1);
+                    double sum1 = 0.0;
+                    double sum2 = 0.0;
+                    double sum3 = 0.0;
+                    for (int tmp_y=0; tmp_y<tmp_height; ++tmp_y) {
+                        for (int tmp_x=0; tmp_x<tmp_width; ++tmp_x) {
+                            sum1 += static_cast<double>(input0(x+tmp_x, y+tmp_y, c)-avr0) * static_cast<double>(input1(tmp_x, tmp_y)-avr1);
+                            sum2 += static_cast<double>(input0(x+tmp_x, y+tmp_y, c)-avr0) * static_cast<double>(input0(x+tmp_x, y+tmp_y, c)-avr0);
+                            sum3 += static_cast<double>(input1(tmp_x, tmp_y)-avr1) * static_cast<double>(input1(tmp_x, tmp_y)-avr1);
+                        }
                     }
-                }
-                double expect = sum1 / sqrt(sum2 * sum3);
+                    double expect = sum1 / sqrt(sum2 * sum3);
 
-                double actual = output(x, y);
-                if (expect != actual) {
-                    throw std::runtime_error(format("Error0: expect(%d, %d) = %f, actual(%d, %d) = %f", x, y, expect, x, y, actual).c_str());
+                    double actual = output(x, y, c);
+                    if (expect != actual) {
+                        throw std::runtime_error(format("Error0: expect(%d, %d, %d) = %f, actual(%d, %d, %d) = %f", x, y, c, expect, x, y, c, actual).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
