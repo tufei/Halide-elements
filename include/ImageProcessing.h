@@ -1086,11 +1086,11 @@ Func threshold_max(Func src, Expr threshold)
 }
 
 template <typename T>
-Func threshold_binary(Func src, Expr threshold, Expr value)
+Func threshold_binary(GeneratorInput<Buffer<T>> &src, Expr threshold, Expr value)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = select (src(x, y) > threshold, value, 0);
+    dst(x, y, c) = select (src(x, y, c) > threshold, value, 0);
 
     return dst;
 }
