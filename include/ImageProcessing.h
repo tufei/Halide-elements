@@ -1116,11 +1116,11 @@ Func threshold_tozero(GeneratorInput<Buffer<T>> &src, Expr threshold)
 }
 
 template <typename T>
-Func threshold_tozero_inv(Func src, Expr threshold)
+Func threshold_tozero_inv(GeneratorInput<Buffer<T>> &src, Expr threshold)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = select (src(x, y) > threshold, 0, src(x,y));
+    dst(x, y, c) = select (src(x, y, c) > threshold, 0, src(x, y, c));
 
     return dst;
 }
