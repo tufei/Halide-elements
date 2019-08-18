@@ -1096,11 +1096,11 @@ Func threshold_binary(GeneratorInput<Buffer<T>> &src, Expr threshold, Expr value
 }
 
 template <typename T>
-Func threshold_binary_inv(Func src, Expr threshold, Expr value)
+Func threshold_binary_inv(GeneratorInput<Buffer<T>> &src, Expr threshold, Expr value)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
-    dst(x, y) = select (src(x, y) > threshold, 0, value);
+    dst(x, y, c) = select (src(x, y, c) > threshold, 0, value);
 
     return dst;
 }

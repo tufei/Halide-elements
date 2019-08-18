@@ -3,25 +3,27 @@
 #include "Element.h"
 
 using namespace Halide;
-using Halide::Element::schedule;
+using namespace Halide::Element;
 
 template<typename T>
 class ThresholdBinInv : public Halide::Generator<ThresholdBinInv<T>> {
+public:
+    GeneratorInput<Buffer<T>> src{"src", 3};
 
-    ImageParam src{type_of<T>(), 2, "src"};
-    Param<T> threshold{"threshold", 1};
-    Param<T> value{"value", 1};
+    GeneratorInput<T> threshold{"threshold"};
+    GeneratorInput<T> value{"value"};
 
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
-public:
-    Func build() {
-        Func dst{"dst"};
-        dst = Element::threshold_binary_inv<T>(src, threshold, value);
+    GeneratorParam<int32_t> depth{"depth", 3};
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
-        return dst;
+    GeneratorOutput<Buffer<T>> dst{"dst", 3};
+
+    void generate() {
+        dst = threshold_binary_inv<T>(src, threshold, value);
+
+        schedule(src, {width, height, depth});
+        schedule(dst, {width, height, depth});
     }
 };
 
