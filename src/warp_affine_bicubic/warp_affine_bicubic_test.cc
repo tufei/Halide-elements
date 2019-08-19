@@ -24,7 +24,7 @@ void getCubicKernel(float n, float w[4]){
 
 template<typename T>
 T interpolateBC(const Halide::Runtime::Buffer<T>& data, const int width, const int height,
-                float x, float y, T border_value, const int border_type)
+                float x, float y, const int channel, T border_value, const int border_type)
 {
     if(x != x){x=0;}
     if(y != y){y=0;}
@@ -41,18 +41,18 @@ T interpolateBC(const Halide::Runtime::Buffer<T>& data, const int width, const i
     if (xf >= 0 && yf >= 0 && xf < width - 3 && yf < height - 3) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                d[i][j] = data(xf+j, yf+i);
+                d[i][j] = data(xf+j, yf+i, channel);
             }
         }
     }else{
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 if (xf >= -j && yf >= -i && xf < width-j && yf < height-i) {
-                    d[i][j] = data(xf+j, yf+i);
+                    d[i][j] = data(xf+j, yf+i, channel);
                 } else if (border_type == 1) {
                     int xfj = BORDER_INTERPOLATE(xf + j, width);
                     int yfi = BORDER_INTERPOLATE(yf + i, height);
-                    d[i][j] = data(xfj, yfi);
+                    d[i][j] = data(xfj, yfi, channel);
                 } else {
                     assert(border_type == 0);
                     d[i][j] = border_value;
@@ -86,27 +86,30 @@ template<typename T>
 Halide::Runtime::Buffer<T>& BC_ref(Halide::Runtime::Buffer<T>& dst,
                                 const Halide::Runtime::Buffer<T>& src,
                                 const int32_t width, const int32_t height,
+                                const int32_t depth,
                                 const T border_value, const int32_t border_type,
                                 const Halide::Runtime::Buffer<double>& transform)
 {
     /* avoid overflow from X-1 to X+2 */
     float imin = static_cast<float>((std::numeric_limits<int>::min)() + 1);
     float imax = static_cast<float>((std::numeric_limits<int>::max)() - 2);
-    for(int i = 0; i < height; ++i){
-        float org_y = static_cast<float>(i) + 0.5f;
-        float src_x0 = static_cast<float>(transform(2)) +
-                       static_cast<float>(transform(1)) * org_y;
-        float src_y0 = static_cast<float>(transform(5)) +
-                       static_cast<float>(transform(4)) * org_y;
-        for(int j = 0; j < width; ++j){
-            float org_x = static_cast<float>(j) + 0.5f;
-            float src_x = src_x0 + static_cast<float>(transform(0)) * org_x;
-            float src_y = src_y0 + static_cast<float>(transform(3)) * org_x;
+    for(int c = 0; c < depth; ++c){
+        for(int i = 0; i < height; ++i){
+            float org_y = static_cast<float>(i) + 0.5f;
+            float src_x0 = static_cast<float>(transform(2)) +
+                           static_cast<float>(transform(1)) * org_y;
+            float src_y0 = static_cast<float>(transform(5)) +
+                           static_cast<float>(transform(4)) * org_y;
+            for(int j = 0; j < width; ++j){
+                float org_x = static_cast<float>(j) + 0.5f;
+                float src_x = src_x0 + static_cast<float>(transform(0)) * org_x;
+                float src_y = src_y0 + static_cast<float>(transform(3)) * org_x;
 
-            src_x = std::max(imin, std::min(imax, src_x));
-            src_y = std::max(imin, std::min(imax, src_y));
+                src_x = std::max(imin, std::min(imax, src_x));
+                src_y = std::max(imin, std::min(imax, src_y));
 
-            dst(j, i) = interpolateBC(src, width, height, src_x, src_y, border_value, border_type);
+                dst(j, i, c) = interpolateBC(src, width, height, src_x, src_y, c, border_value, border_type);
+            }
         }
     }
 
@@ -123,7 +126,8 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
     try {
         const int width = 1024;
         const int height = 768;
-        const std::vector<int32_t> extents{width, height};
+        const int depth = 3;
+        const std::vector<int32_t> extents{width, height, depth};
         const std::vector<int32_t> tableSize{6};
         const T border_value = mk_rand_scalar<T>();
         const int32_t border_type = 0; // 0 or 1
@@ -133,18 +137,19 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
 
         func(input, border_value, transform, output);
         auto expect = mk_null_buffer<T>(extents);
-        expect = BC_ref(expect, input, width, height, border_value, border_type, transform);
+        expect = BC_ref(expect, input, width, height, depth, border_value, border_type, transform);
 
-        //for each x and y
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                if (expect(x, y) != output(x, y)) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                    x, y, expect(x, y), x, y, output(x, y)).c_str());
+        for (int c=0; c<depth; ++c) {
+            //for each x and y
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    if (expect(x, y, c) != output(x, y, c)) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                        x, y, c, expect(x, y, c), x, y, c, output(x, y, c)).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
