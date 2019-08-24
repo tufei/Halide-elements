@@ -869,9 +869,9 @@ Func warp_map_bilinear(Func src0, Func src1, Func src2, int32_t border_type, Exp
 }
 
 template<typename T>
-Func warp_map_bicubic(Func src0, Func src1, Func src2, int32_t border_type, Expr border_value, int32_t width, int32_t height)
+Func warp_map_bicubic(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<float>> &src1, GeneratorInput<Buffer<float>> &src2, int32_t border_type, Expr border_value, int32_t width, int32_t height, int32_t depth)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
 
     Expr srcx = src1(x, y);
@@ -890,11 +890,11 @@ Func warp_map_bicubic(Func src0, Func src1, Func src2, int32_t border_type, Expr
     xf = xf - (xf > j-1.0f);
     yf = yf - (yf > i-1.0f);
 
-    Func type0 = BoundaryConditions::constant_exterior(src0, border_value, 0, width, 0, height);
-    Func type1 = BoundaryConditions::repeat_edge(src0, 0, width, 0, height);
+    Func type0 = BoundaryConditions::constant_exterior(src0, border_value, 0, width, 0, height, 0, depth);
+    Func type1 = BoundaryConditions::repeat_edge(src0, 0, width, 0, height, 0, depth);
 
     RDom r{0, 4, 0, 4, "r"};
-    Expr d = cast<float>(select(border_type==1,type1(xf+r.x, yf+r.y) ,type0(xf+r.x, yf+r.y)));
+    Expr d = cast<float>(select(border_type==1,type1(xf+r.x, yf+r.y, c) ,type0(xf+r.x, yf+r.y, c)));
 
     Expr dx = min(max(0.0f, j-cast<float>(xf)-1.0f), 1.0f);
     Expr dy = min(max(0.0f, i-cast<float>(yf)-1.0f), 1.0f);
@@ -924,7 +924,7 @@ Func warp_map_bicubic(Func src0, Func src1, Func src2, int32_t border_type, Expr
     value = select(value > cast<float>(type_of<T>().max()), cast<float>(type_of<T>().max()),
                    value < cast<float>(type_of<T>().min()), cast<float>(type_of<T>().min()),
                    value + 0.5f);
-    dst(x, y) = cast<T>(value);
+    dst(x, y, c) = cast<T>(value);
 
     return dst;
 }

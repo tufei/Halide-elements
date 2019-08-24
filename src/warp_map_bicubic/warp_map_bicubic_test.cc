@@ -22,7 +22,7 @@ void getCubicKernel(float n, float w[4]){
 
 template<typename T>
 T interpolateBC(const Halide::Runtime::Buffer<T>& data, const int width, const int height,
-                float x, float y, T border_value, const int border_type)
+                float x, float y, const int channel, T border_value, const int border_type)
 {
     if(x != x){x=0;}
     if(y != y){y=0;}
@@ -39,7 +39,7 @@ T interpolateBC(const Halide::Runtime::Buffer<T>& data, const int width, const i
     if (xf >= 0 && yf >= 0 && xf < width - 3 && yf < height - 3) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                d[i][j] = data(xf+j, yf+i);
+                d[i][j] = data(xf+j, yf+i, channel);
             }
         }
     }else{
@@ -50,7 +50,7 @@ T interpolateBC(const Halide::Runtime::Buffer<T>& data, const int width, const i
                 } else if (border_type == 1) {
                     int xfj = BORDER_INTERPOLATE(xf + j, width);
                     int yfi = BORDER_INTERPOLATE(yf + i, height);
-                    d[i][j] = data(xfj, yfi);
+                    d[i][j] = data(xfj, yfi, channel);
                 } else {
                     assert(border_type == 0);
                     d[i][j] = border_value;
@@ -88,21 +88,24 @@ Halide::Runtime::Buffer<T>& warp_map_bicubic_ref(Halide::Runtime::Buffer<T>& dst
                                 const Halide::Runtime::Buffer<float>& mapX,
                                 const Halide::Runtime::Buffer<float>& mapY,
                                 const T border_value, const int32_t border_type,
-                                const int32_t width, const int32_t height)
+                                const int32_t width, const int32_t height,
+                                const int32_t depth)
 {
     /* avoid overflow from X-1 to X+2 */
     float imin = static_cast<float>((std::numeric_limits<int>::min)() + 1);
     float imax = static_cast<float>((std::numeric_limits<int>::max)() - 2);
 
-    for(int i = 0; i < height; ++i){
-        for(int j = 0; j < width; ++j){
-            float src_x = mapX(j, i);
-            float src_y = mapY(j, i);
+    for(int c = 0; c < depth; ++c){
+        for(int i = 0; i < height; ++i){
+            for(int j = 0; j < width; ++j){
+                float src_x = mapX(j, i);
+                float src_y = mapY(j, i);
 
-            src_x = std::max(imin, std::min(imax, src_x));
-            src_y = std::max(imin, std::min(imax, src_y));
+                src_x = std::max(imin, std::min(imax, src_x));
+                src_y = std::max(imin, std::min(imax, src_y));
 
-            dst(j, i) = interpolateBC(src, width, height, src_x, src_y, border_value, border_type);
+                dst(j, i, c) = interpolateBC(src, width, height, src_x, src_y, c, border_value, border_type);
+            }
         }
     }
     return dst;
@@ -118,29 +121,32 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
     try {
         const int width = 1024;
         const int height = 768;
+        const int depth = 3;
+        const std::vector<int32_t> extents_3d{width, height, depth};
         const std::vector<int32_t> extents{width, height};
         const T border_value = mk_rand_scalar<T>();
         const int32_t border_type = 0; // 0 or 1
-        auto input0 = mk_rand_buffer<T>(extents);
+        auto input0 = mk_rand_buffer<T>(extents_3d);
         auto input1 = mk_rand_buffer<float>(extents);
         auto input2 = mk_rand_buffer<float>(extents);
-        auto output = mk_null_buffer<T>(extents);
+        auto output = mk_null_buffer<T>(extents_3d);
 
 
         func(input0, input1, input2, border_value, output);
 
-        auto expect = mk_null_buffer<T>(extents);
-        expect = warp_map_bicubic_ref(expect, input0, input1, input2, border_value, border_type, width, height);
-        // for each x and y
-        for (int j=0; j<width; ++j) {
-            for (int i=0; i<height; ++i) {
-                if (abs(expect(j, i) - output(j, i)) > 1) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                j, i, expect(j, i), j, i, output(j, i)));
+        auto expect = mk_null_buffer<T>(extents_3d);
+        expect = warp_map_bicubic_ref(expect, input0, input1, input2, border_value, border_type, width, height, depth);
+        for (int c=0; c<depth; ++c) {
+            // for each x and y
+            for (int j=0; j<width; ++j) {
+                for (int i=0; i<height; ++i) {
+                    if (abs(expect(j, i, c) - output(j, i, c)) > 1) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                    j, i, c, expect(j, i, c), j, i, c, output(j, i, c)));
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e){
         std::cerr << e.what() << std::endl;
         return 1;
