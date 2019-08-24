@@ -958,9 +958,11 @@ Func warp_affine_NN(Func src, int32_t border_type, Expr border_value, Func trans
 }
 
 template<typename T>
-Func warp_affine_bilinear(Func src, int32_t border_type, Expr border_value, Func transform, int32_t width, int32_t height)
+Func warp_affine_bilinear(GeneratorInput<Buffer<T>> &src, int32_t border_type, Expr border_value, GeneratorInput<Buffer<double>> &transform, int32_t width, int32_t height, int32_t depth)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"};
+    Var y{"y"};
+    Var c{"c"};
     Func dst{"dst"};
     Expr orgx = cast<float>(x) + 0.5f;
     Expr orgy = cast<float>(y) + 0.5f;
@@ -982,19 +984,19 @@ Func warp_affine_bilinear(Func src, int32_t border_type, Expr border_value, Func
     xf = xf - (xf > j);
     yf = yf - (yf > i);
 
-    Func type0 = BoundaryConditions::constant_exterior(src, border_value, 0, width, 0, height);
-    Func type1 = BoundaryConditions::repeat_edge(src, 0, width, 0, height);
+    Func type0 = BoundaryConditions::constant_exterior(src, border_value, 0, width, 0, height, 0, depth);
+    Func type1 = BoundaryConditions::repeat_edge(src, 0, width, 0, height, 0, depth);
     Expr d[4];
-    d[0] = select(border_type==1, type1(xf, yf), type0(xf, yf));
-    d[1] = select(border_type==1, type1(xf+1, yf), type0(xf+1, yf));
-    d[2] = select(border_type==1, type1(xf, yf+1), type0(xf, yf+1));
-    d[3] = select(border_type==1, type1(xf+1, yf+1), type0(xf+1, yf+1));
+    d[0] = select(border_type==1, type1(xf, yf, c), type0(xf, yf, c));
+    d[1] = select(border_type==1, type1(xf+1, yf, c), type0(xf+1, yf, c));
+    d[2] = select(border_type==1, type1(xf, yf+1, c), type0(xf, yf+1, c));
+    d[3] = select(border_type==1, type1(xf+1, yf+1, c), type0(xf+1, yf+1, c));
 
     Expr dx = min(max(0.0f, j-cast<float>(xf)), 1.0f);
     Expr dy = min(max(0.0f, i-cast<float>(yf)), 1.0f);
     Expr value = (d[0]*(1.0f-dx)*(1.0f-dy) + d[1]*dx*(1.0f-dy))
                  + (d[2]*(1.0f-dx)*dy + d[3]*dx*dy);
-    dst(x, y) = cast<T>(value+0.5f);
+    dst(x, y, c) = cast<T>(value+0.5f);
     return dst;
 }
 
