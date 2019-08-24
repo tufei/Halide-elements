@@ -806,9 +806,9 @@ Func scale_bicubic(GeneratorInput<Buffer<T>> &src, int32_t in_width, int32_t in_
 }
 
 template<typename T>
-Func warp_map_NN(Func src0, Func src1, Func src2, int32_t border_type, Expr border_value, int32_t width, int32_t height)
+Func warp_map_NN(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<float>> &src1, GeneratorInput<Buffer<float>> &src2, int32_t border_type, Expr border_value, int32_t width, int32_t height, int32_t depth)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
 
     Expr srcx = src1(x, y);
@@ -822,9 +822,9 @@ Func warp_map_NN(Func src0, Func src1, Func src2, int32_t border_type, Expr bord
 
     Expr i = cast<int>(floor(srcy));
     Expr j = cast<int>(floor(srcx));
-    Func type0 = BoundaryConditions::constant_exterior(src0, border_value, 0, width, 0, height);
-    Func type1 = BoundaryConditions::repeat_edge(src0, 0, width, 0, height);
-    dst(x, y) = select(border_type==1, type1(j, i), type0(j, i));
+    Func type0 = BoundaryConditions::constant_exterior(src0, border_value, 0, width, 0, height, 0, depth);
+    Func type1 = BoundaryConditions::repeat_edge(src0, 0, width, 0, height, 0, depth);
+    dst(x, y, c) = select(border_type==1, type1(j, i, c), type0(j, i, c));
 
     return dst;
 }
