@@ -31,7 +31,9 @@
 *.out
 *.app
 
-# VS code
+# Visual Studio Code
 .vscode
 *.code-workspace
 
+# Editor swap file
+*.swp
