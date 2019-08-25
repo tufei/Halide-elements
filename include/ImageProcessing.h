@@ -1130,9 +1130,9 @@ Func threshold_tozero_inv(GeneratorInput<Buffer<T>> &src, Expr threshold)
 }
 
 template<typename T>
-Func warp_perspective_NN(Func src, int32_t border_type, Expr border_value, Func transform, int32_t width, int32_t height)
+Func warp_perspective_NN(GeneratorInput<Buffer<T>> &src, int32_t border_type, Expr border_value, GeneratorInput<Buffer<double>> &transform, int32_t width, int32_t height, int32_t depth)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
     Expr orgx = cast<float>(x) + 0.5f;
     Expr orgy = cast<float>(y) + 0.5f;
@@ -1152,9 +1152,9 @@ Func warp_perspective_NN(Func src, int32_t border_type, Expr border_value, Func 
     Expr i = cast<int>(floor(srcy));
     Expr j = cast<int>(floor(srcx));
 
-    Func type0 = BoundaryConditions::constant_exterior(src, border_value, 0, width, 0, height);
-    Func type1 = BoundaryConditions::repeat_edge(src, 0, width, 0, height);
-    dst(x, y) = select(border_type==1, type1(j, i), type0(j, i));
+    Func type0 = BoundaryConditions::constant_exterior(src, border_value, 0, width, 0, height, 0, depth);
+    Func type1 = BoundaryConditions::repeat_edge(src, 0, width, 0, height, 0, depth);
+    dst(x, y, c) = select(border_type==1, type1(j, i, c), type0(j, i, c));
 
     return dst;
 }
@@ -1203,9 +1203,9 @@ Func warp_perspective_bilinear(Func src, int32_t border_type, Expr border_value,
 }
 
 template<typename T>
-Func warp_perspective_bicubic(Func src, int32_t border_type, Expr border_value, Func transform, int32_t width, int32_t height)
+Func warp_perspective_bicubic(GeneratorInput<Buffer<T>> &src, int32_t border_type, Expr border_value, GeneratorInput<Buffer<double>> &transform, int32_t width, int32_t height, int32_t depth)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
     Expr orgx = cast<float>(x) + 0.5f;
     Expr orgy = cast<float>(y) + 0.5f;
@@ -1229,11 +1229,11 @@ Func warp_perspective_bicubic(Func src, int32_t border_type, Expr border_value, 
     xf = xf - (xf > j-1.0f);
     yf = yf - (yf > i-1.0f);
 
-    Func type0 = BoundaryConditions::constant_exterior(src, border_value, 0, width, 0, height);
-    Func type1 = BoundaryConditions::repeat_edge(src, 0, width, 0, height);
+    Func type0 = BoundaryConditions::constant_exterior(src, border_value, 0, width, 0, height, 0, depth);
+    Func type1 = BoundaryConditions::repeat_edge(src, 0, width, 0, height, 0, depth);
 
     RDom r{0, 4, 0, 4, "r"};
-    Expr d = cast<float>(select(border_type==1,type1(xf+r.x, yf+r.y) ,type0(xf+r.x, yf+r.y)));
+    Expr d = cast<float>(select(border_type==1, type1(xf+r.x, yf+r.y, c), type0(xf+r.x, yf+r.y, c)));
 
     Expr dx = min(max(0.0f, j-cast<float>(xf)-1.0f), 1.0f);
     Expr dy = min(max(0.0f, i-cast<float>(yf)-1.0f), 1.0f);
@@ -1263,7 +1263,8 @@ Func warp_perspective_bicubic(Func src, int32_t border_type, Expr border_value, 
     value = select(value > cast<float>(type_of<T>().max()), cast<float>(type_of<T>().max()),
                    value < cast<float>(type_of<T>().min()), cast<float>(type_of<T>().min()),
                    value + 0.5f);
-    dst(x, y) = cast<T>(value);
+    dst(x, y, c) = cast<T>(value);
+
     return dst;
 }
 
