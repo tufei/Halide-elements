@@ -4,6 +4,7 @@
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
+#include <cassert>
 #include <cmath>
 #include <Halide.h>
 #include "FixedPoint.h"
@@ -162,9 +163,12 @@ Func convolution(GeneratorInput<Buffer<TI>> &in, int32_t width, int32_t height, 
     return out;
 }
 
+
 template<uint32_t frac_bits>
 Func gamma_correction(Func in, GeneratorInput<float> &value)
 {
+    assert(value.type().is_float());
+
     Var x, y, c;
 
     Fixed<int16_t, frac_bits>  v = Fixed<int16_t, frac_bits>{in(c,x,y)};
@@ -192,6 +196,8 @@ Fixed<int16_t, frac_bits> to_fixed16(Expr e)
 template<uint32_t frac_bits>
 Func saturation_adjustment(Func in, GeneratorInput<float> &value)
 {
+    assert(value.type().is_float());
+
     Var x, y, c;
 
     Fixed<int16_t, frac_bits> zero = to_fixed16<frac_bits>(0);

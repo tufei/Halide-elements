@@ -6,7 +6,7 @@
 #include "Element/ImageProcessing.h"
 #include "Element/MathFunc.h"
 #include "Element/Morphology.h"
-#include "Element/NeuralNet.h"
+#include "Element/NeuralNet2.h"
 #include "Element/Reduction.h"
 #include "Element/Schedule.h"
 #include "Element/StereoMatching.h"
