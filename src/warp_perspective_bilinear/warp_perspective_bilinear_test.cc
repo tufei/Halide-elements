@@ -17,7 +17,7 @@
 template<typename T>
 T interpolateBL(const Halide::Runtime::Buffer<T>& data,
                 const int width, const int height,
-                float x, float y, T border_value, const int border_type)
+                float x, float y, const int channel, T border_value, const int border_type)
 {
     if(x != x){x=0;}
     if(y != y){y=0;}
@@ -32,19 +32,19 @@ T interpolateBL(const Halide::Runtime::Buffer<T>& data,
 
     T d[4];
     if (xf >= 0 && yf >= 0 && xf < width-1 && yf < height -1){
-        d[0] = data(xf, yf);
-        d[1] = data(xf+1, yf);
-        d[2] = data(xf, yf+1);
-        d[3] = data(xf+1, yf+1);
+        d[0] = data(xf, yf, channel);
+        d[1] = data(xf+1, yf, channel);
+        d[2] = data(xf, yf+1, channel);
+        d[3] = data(xf+1, yf+1, channel);
     }else if (border_type==1){
         int xf0 = BORDER_INTERPOLATE(xf, width);
         int xf1 = BORDER_INTERPOLATE(xf+1, width);
         int yf0 = BORDER_INTERPOLATE(yf, height);
         int yf1 = BORDER_INTERPOLATE(yf+1, height);
-        d[0] = data(xf0, yf0);
-        d[1] = data(xf1, yf0);
-        d[2] = data(xf0, yf1);
-        d[3] = data(xf1, yf1);
+        d[0] = data(xf0, yf0, channel);
+        d[1] = data(xf1, yf0, channel);
+        d[2] = data(xf0, yf1, channel);
+        d[3] = data(xf1, yf1, channel);
     }else{
         assert(border_type==0);
         int cmpxf0 = xf >= 0 && xf < width;
@@ -52,10 +52,10 @@ T interpolateBL(const Halide::Runtime::Buffer<T>& data,
         int cmpyf0 = yf >= 0 && yf < height;
         int cmpyf1 = yf >= -1 && yf < height -1;
 
-        d[0] = cmpxf0 && cmpyf0 ? data(xf, yf) : border_value;
-        d[1] = cmpxf1 && cmpyf0 ? data(xf+1, yf) : border_value;
-        d[2] = cmpxf0 && cmpyf1 ? data(xf, yf+1) : border_value;
-        d[3] = cmpxf1 && cmpyf1 ? data(xf+1, yf+1) : border_value;
+        d[0] = cmpxf0 && cmpyf0 ? data(xf, yf, channel) : border_value;
+        d[1] = cmpxf1 && cmpyf0 ? data(xf+1, yf, channel) : border_value;
+        d[2] = cmpxf0 && cmpyf1 ? data(xf, yf+1, channel) : border_value;
+        d[3] = cmpxf1 && cmpyf1 ? data(xf+1, yf+1, channel) : border_value;
     }
 
     float dx = (std::min)((std::max)(0.0f, x - xf), 1.0f);
@@ -70,6 +70,7 @@ template<typename T>
 Halide::Runtime::Buffer<T>& NN_ref(Halide::Runtime::Buffer<T>& dst,
                                 const Halide::Runtime::Buffer<T>& src,
                                 const int32_t width, const int32_t height,
+                                const int32_t depth,
                                 const T border_value, const int32_t border_type,
                                 const Halide::Runtime::Buffer<double>& transform)
 {
@@ -77,27 +78,28 @@ Halide::Runtime::Buffer<T>& NN_ref(Halide::Runtime::Buffer<T>& dst,
     float imin = static_cast<float>((std::numeric_limits<int>::min)() + 1);
     float imax = static_cast<float>((std::numeric_limits<int>::max)() - 2);
 
-    for(int i = 0; i < height; ++i){
-        float org_y = static_cast<float>(i) + 0.5f;
-        float src_xw0 = static_cast<float>(transform(2)) +
-                        static_cast<float>(transform(1)) * org_y;
-        float src_yw0 = static_cast<float>(transform(5)) +
-                        static_cast<float>(transform(4)) * org_y;
-        float src_w0 = static_cast<float>(transform(8)) +
-                       static_cast<float>(transform(7)) * org_y;
-        for(int j = 0; j < width; ++j){
-            float org_x = static_cast<float>(j) + 0.5f;
-            float inv_w = 1.0f / (src_w0 + static_cast<float>(transform(6)) * org_x);
-            float src_x = (src_xw0 + static_cast<float>(transform(0)) * org_x) * inv_w;
-            float src_y = (src_yw0 + static_cast<float>(transform(3)) * org_x) * inv_w;
+    for(int c = 0; c < depth; ++c){
+        for(int i = 0; i < height; ++i){
+            float org_y = static_cast<float>(i) + 0.5f;
+            float src_xw0 = static_cast<float>(transform(2)) +
+                            static_cast<float>(transform(1)) * org_y;
+            float src_yw0 = static_cast<float>(transform(5)) +
+                            static_cast<float>(transform(4)) * org_y;
+            float src_w0 = static_cast<float>(transform(8)) +
+                           static_cast<float>(transform(7)) * org_y;
+            for(int j = 0; j < width; ++j){
+                float org_x = static_cast<float>(j) + 0.5f;
+                float inv_w = 1.0f / (src_w0 + static_cast<float>(transform(6)) * org_x);
+                float src_x = (src_xw0 + static_cast<float>(transform(0)) * org_x) * inv_w;
+                float src_y = (src_yw0 + static_cast<float>(transform(3)) * org_x) * inv_w;
 
-            src_x = std::max(imin, std::min(imax, src_x));
-            src_y = std::max(imin, std::min(imax, src_y));
+                src_x = std::max(imin, std::min(imax, src_x));
+                src_y = std::max(imin, std::min(imax, src_y));
 
-            dst(j, i) = interpolateBL(src, width, height, src_x, src_y, border_value, border_type);
+                dst(j, i, c) = interpolateBL(src, width, height, src_x, src_y, c, border_value, border_type);
+            }
         }
     }
-
     return dst;
 }
 
@@ -111,7 +113,8 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
     try {
         const int width = 1024;
         const int height = 768;
-        const std::vector<int32_t> extents{width, height};
+        const int depth = 3;
+        const std::vector<int32_t> extents{width, height, depth};
         const std::vector<int32_t> tableSize{9};
         const T border_value = mk_rand_scalar<T>();
         const int32_t border_type = 1; // 0 or 1
@@ -121,18 +124,18 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
 
         func(input, border_value, transform, output);
         auto expect = mk_null_buffer<T>(extents);
-        expect = NN_ref(expect, input, width, height, border_value, border_type, transform);
-
-        //for each x and y
-        for (int y=0; y<height; ++y) {
-            for (int x=0; x<width; ++x) {
-                if (expect(x, y) != output(x, y)) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                    x, y, expect(x, y), x, y, output(x, y)).c_str());
+        expect = NN_ref(expect, input, width, height, depth, border_value, border_type, transform);
+        for (int c=0; c<depth; ++c) {
+            //for each x and y
+            for (int y=0; y<height; ++y) {
+                for (int x=0; x<width; ++x) {
+                    if (expect(x, y, c) != output(x, y, c)) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                        x, y, c, expect(x, y, c), x, y, c, output(x, y, c)).c_str());
+                    }
                 }
             }
         }
-
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
