@@ -48,15 +48,15 @@ ${PROG}_gen: ${PROG}_generator.cc
 ${PROG}_gen.exec: ${PROG}_gen
 ifdef TYPE_LIST
 ifeq ($(OS), Linux)
-	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library target=x86-64-no_asserts;)
+	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=x86-64-no_asserts;)
 else
-	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library target=x86-64-no_asserts;)
+	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=x86-64-no_asserts;)
 endif
 else
 ifeq ($(OS), Linux)
-	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library target=host-no_asserts
+	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host-no_asserts
 else
-	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o .  -g ${PROG} -e h,static_library target=host-no_asserts
+	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o .  -g ${PROG} -e h,static_library,stmt target=host-no_asserts
 endif
 endif
 	@touch ${PROG}_gen.exec
@@ -133,4 +133,4 @@ run: ${PROG}_run.c ${PROG}.hls.exec
 	arm-linux-gnueabihf-gcc ${CFLAGS} ${TARGET_SRC} -o $@ ${TARGET_LIB}
 
 clean:
-	rm -rf ${PROG}_gen ${PROG}_test ${PROG}_*test_csim ${PROG}_run ${PROG}*.h ${PROG}*.a *.o *.hls *.exec *.dSYM *.ppm *.pgm *.dat
+	rm -rf ${PROG}_gen ${PROG}_test ${PROG}_*test_csim ${PROG}_run ${PROG}*.h ${PROG}*.a ${PROG}*.stmt *.o *.hls *.exec *.dSYM *.ppm *.pgm *.dat

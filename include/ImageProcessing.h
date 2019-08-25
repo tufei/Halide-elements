@@ -1242,7 +1242,7 @@ Func warp_perspective_bicubic(GeneratorInput<Buffer<T>> &src, int32_t border_typ
     Expr w0 = ((a*(dx+1.0f)-5.0f*a)*(dx+1.0f)+8.0f*a)*(dx+1.0f)-4.0f*a;
     Expr w1 = ((a+2.0f)*dx-(a+3.0f))*dx*dx+1.0f;
     Expr w2 = ((a+2.0f)*(1.0f-dx)-(a+3.0f))*(1.0f-dx)*(1.0f-dx)+1.0f;
-    Expr w3 = 1.0f - w2 - w1 -w0;
+    Expr w3 = 1.0f - w2 - w1 - w0;
 
     d = select(r.x == 0, d*w0,
                r.x == 1, d*w1,
@@ -1252,7 +1252,7 @@ Func warp_perspective_bicubic(GeneratorInput<Buffer<T>> &src, int32_t border_typ
     w0 = ((a*(dy+1.0f)-5.0f*a)*(dy+1.0f)+8.0f*a)*(dy+1.0f)-4.0f*a;
     w1 = ((a+2.0f)*dy-(a+3.0f))*dy*dy+1.0f;
     w2 = ((a+2.0f)*(1.0f-dy)-(a+3.0f))*(1.0f-dy)*(1.0f-dy)+1.0f;
-    w3 = 1.0f - w2 - w1 -w0;
+    w3 = 1.0f - w2 - w1 - w0;
 
     Expr c0 = sum(select(r.y ==0, d, 0))*w0;
     Expr c1 = sum(select(r.y ==1, d, 0))*w1;
