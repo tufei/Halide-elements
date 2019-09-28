@@ -13,6 +13,19 @@ namespace {
 //
 // Scheduling
 //
+template<typename T>
+GeneratorInput<Buffer<T>>& schedule(GeneratorInput<Buffer<T>>& gi,
+                                    const std::vector<Expr>& mins,
+                                    const std::vector<Expr>& extents)
+{
+    assert(mins.size() == extents.size());
+    for (size_t i=0; i<mins.size(); ++i) {
+        gi.dim(i).set_bounds(mins[i], extents[i])
+          .dim(i).set_stride(i == 0 ? 1 : gi.dim(i - 1).stride() * extents[i - 1]);
+    }
+    return gi;
+}
+
 ImageParam& schedule(ImageParam& ip, const std::vector<Expr>& mins, const std::vector<Expr>& extents)
 {
     assert(mins.size() == extents.size());
@@ -21,6 +34,27 @@ ImageParam& schedule(ImageParam& ip, const std::vector<Expr>& mins, const std::v
           .dim(i).set_stride(i == 0 ? 1 : ip.dim(i - 1).stride() * extents[i - 1]);
     }
     return ip;
+}
+
+template<typename T>
+GeneratorOutput<Buffer<T>>& schedule(GeneratorOutput<Buffer<T>>& go,
+                                     const std::vector<Expr>& mins,
+                                     const std::vector<Expr>& extents)
+{
+    assert(mins.size() == extents.size());
+
+    go.compute_root();
+
+    // auto bounds = f.function().schedule().bounds();
+    for (size_t i=0; i<mins.size(); ++i) {
+        Var var = go.args()[i];
+        // NOTE: Internal API should not be used. It is responsible to user to scheduled just once.
+        // if (std::find_if(bounds.begin(), bounds.end(), [&](const Internal::Bound& b) { return b.var == var.name(); }) == bounds.end()) {
+        //     f.bound(var, mins[i], extents[i]);
+        // }
+        go.bound(var, mins[i], extents[i]);
+    }
+    return go;
 }
 
 Func& schedule(Func& f, const std::vector<Expr>& mins, const std::vector<Expr>& extents)
@@ -41,10 +75,26 @@ Func& schedule(Func& f, const std::vector<Expr>& mins, const std::vector<Expr>& 
     return f;
 }
 
+template<typename T>
+GeneratorInput<Buffer<T>>& schedule(GeneratorInput<Buffer<T>>& gi,
+                                    const std::vector<Expr>& shape)
+{
+    const std::vector<Expr> mins(shape.size(), 0);
+    return schedule(gi, mins, shape);
+}
+
 ImageParam& schedule(ImageParam& ip, const std::vector<Expr>& shape)
 {
     const std::vector<Expr> mins(shape.size(), 0);
     return schedule(ip, mins, shape);
+}
+
+template<typename T>
+GeneratorOutput<Buffer<T>>& schedule(GeneratorOutput<Buffer<T>>& go,
+                                     const std::vector<Expr>& shape)
+{
+    const std::vector<Expr> mins(shape.size(), 0);
+    return schedule(go, mins, shape);
 }
 
 Func& schedule(Func& f, const std::vector<Expr>& shape)

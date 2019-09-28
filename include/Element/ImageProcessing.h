@@ -1275,11 +1275,12 @@ Func warp_perspective_bicubic(GeneratorInput<Buffer<T>> &src, int32_t border_typ
 }
 
 template <typename T>
-Func subimage(Func src, Expr originx, Expr originy)
+Func subimage(GeneratorInput<Buffer<T>> &src, Expr originx, Expr originy)
 {
-    Var x{"x"}, y{"y"};
+    Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
-    dst(x, y) = src(x+originx, y+originy);
+    dst(x, y, c) = src(x+originx, y+originy, c);
+
     return dst;
 }
 

@@ -19,34 +19,40 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
     try {
         const int32_t in_width = 1024;
         const int32_t in_height = 768;
+        const int32_t in_depth = 3;
 
         const int32_t out_width = 500;
         const int32_t out_height = 500;
+        const int32_t out_depth = 3;
 
         uint32_t xLimit = in_width - out_width;
         uint32_t yLimit = in_height - out_height;
         const uint32_t origin_x = mk_rand_scalar<int32_t>() % xLimit;
         const uint32_t origin_y = mk_rand_scalar<int32_t>() % yLimit;
 
-        const std::vector<int32_t> in_extents{in_width, in_height};
-        const std::vector<int32_t> out_extents{out_width, out_height};
+        const std::vector<int32_t> in_extents{in_width, in_height, in_depth};
+        const std::vector<int32_t> out_extents{out_width, out_height, out_depth};
         auto input = mk_rand_buffer<T>(in_extents);
         auto output = mk_null_buffer<T>(out_extents);
         auto expect = mk_null_buffer<T>(out_extents);
 
-        for(int i = 0; i < out_height; i++){
-            for (int j = 0; j < out_width; j++){
-                expect(j, i) = input(origin_x + j, origin_y + i);
+        for(int c = 0; c < out_depth; c++){
+            for(int i = 0; i < out_height; i++){
+                for (int j = 0; j < out_width; j++){
+                    expect(j, i, c) = input(origin_x + j, origin_y + i, c);
+                }
             }
         }
 
         func(input, origin_x, origin_y, output);
-        //for each x and y
-        for (int i=0; i<out_height; ++i) {
-            for (int j=0; j<out_width; ++j) {
-                if (expect(j, i) != output(j, i)) {
-                    throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                                j, i, expect(j, i), j, i, output(j, i)));
+        //for each x, y, and c
+        for (int c=0; c<out_depth; ++c) {
+            for (int i=0; i<out_height; ++i) {
+                for (int j=0; j<out_width; ++j) {
+                    if (expect(j, i, c) != output(j, i, c)) {
+                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
+                                                    j, i, c, expect(j, i, c), j, i, c, output(j, i, c)));
+                    }
                 }
             }
         }
