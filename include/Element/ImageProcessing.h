@@ -141,8 +141,13 @@ Func convolution(GeneratorInput<Buffer<TI>> &in, int32_t width, int32_t height, 
 
     Func bounded = BoundaryConditions::repeat_edge(in, 0, width, 0, height, 0, depth);
 
+#if 0
     Expr kh = Halide::div_round_to_zero(kernel_size, 2);
     RDom r(0, kernel_size, 0, kernel_size);
+#else
+    Expr kh = cast<int>(kernel_size/2);
+    RDom r{0, kernel_size, 0, kernel_size};
+#endif
 
     Expr dx = r.x - kh;
     Expr dy = r.y - kh;

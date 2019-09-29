@@ -23,9 +23,9 @@ int main(int argc, char **argv) {
         constexpr uint32_t frac_bits = 10;
         const fixed16_t kv = static_cast<fixed16_t>(round(1.0f * (1 << frac_bits)));
         fixed16_t kernel_data[5][5] = {
-            { kv, kv, kv, 0, 0},
-            { kv, kv, kv, 0, 0},
-            { kv, kv, kv, 0, 0},
+            {kv, kv, kv,  0, 0},
+            {kv, kv, kv,  0, 0},
+            {kv, kv, kv,  0, 0},
             { 0,  0,  0,  0, 0},
             { 0,  0,  0,  0, 0}
         };
