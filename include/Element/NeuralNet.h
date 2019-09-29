@@ -191,15 +191,15 @@ Func conv_qq_fixed32(Func bottom, T weight, T bias,
     using Fixed32 = Fixed<int32_t, FB>;
 
     Expr w = weight(r.x, r.y, r.z, c) & 0x7F;
-    Expr wi = cast<int8_t>(w >> 1);
+    Expr wi = cast<uint8_t>(w >> 1);
     Expr wf = cast<int32_t>(w & 0x1);
     Expr w_sign = (weight(r.x, r.y, r.z, c) & 0x80) == 0x80;
     Expr v = in(r.x, x*stride - pad + r.y, y*stride - pad + r.z, n) & 0x7F;
-    Expr vi = cast<int8_t>(v >> 1);
+    Expr vi = cast<uint8_t>(v >> 1);
     Expr vf = cast<int32_t>(v & 0x1);
     Expr v_sign = (in(r.x, x*stride - pad + r.y, y*stride - pad + r.z, n) & 0x80) == 0x80;
 
-    Expr offset = cast<int8_t>(Expr(FB));
+    Expr offset = cast<uint8_t>(Expr(FB));
 
     Expr e = (cast<int32_t>(1) << max(wi + vi - offset, 0)) +
         ((wf + vf) << max(wi + vi - 1 - offset, 0)) +
@@ -838,11 +838,11 @@ Func fc_qq_fixed32(Func bottom, T weight, T bias, const std::vector<int32_t>& we
 
     if (bottom.dimensions() == 4) {
         RDom r(0, weight_shape[0], 0, weight_shape[1], 0, weight_shape[2]);
-        Expr v = cast<int8_t>(bottom(r.x, r.y, r.z, n) & 0x7F);
-        Expr w = cast<int8_t>(weight(r.x, r.y, r.z, i) & 0x7F);
+        Expr v = cast<uint8_t>(bottom(r.x, r.y, r.z, n) & 0x7F);
+        Expr w = cast<uint8_t>(weight(r.x, r.y, r.z, i) & 0x7F);
         Expr v_sign = (bottom(r.x, r.y, r.z, n) & 0x80) == 0x80;
         Expr w_sign = (weight(r.x, r.y, r.z, i) & 0x80) == 0x80;
-        Expr offset = cast<int8_t>(Expr(FB));
+        Expr offset = cast<uint8_t>(Expr(FB));
 
         Expr e = cast<int32_t>(1) << max(w + v - offset, 0);
         // Mark sign.
@@ -857,15 +857,15 @@ Func fc_qq_fixed32(Func bottom, T weight, T bias, const std::vector<int32_t>& we
     } else {
         RDom r(0, weight_shape[0]);
         Expr v = bottom(r.x, n) & 0x7F;
-        Expr vi = cast<int8_t>(v >> 1);
+        Expr vi = cast<uint8_t>(v >> 1);
         Expr vf = cast<int32_t>(v & 0x1);
         Expr v_sign = (bottom(r.x, n) & 0x80) == 0x80;
         Expr w = weight(r.x, i) & 0x7F;
-        Expr wi = cast<int8_t>(w >> 1);
+        Expr wi = cast<uint8_t>(w >> 1);
         Expr wf = cast<int32_t>(w & 0x1);
         Expr w_sign = (weight(r.x, i) & 0x80) == 0x80;
 
-        Expr offset = cast<int8_t>(Expr(FB));
+        Expr offset = cast<uint8_t>(Expr(FB));
 
         Expr e = (cast<int32_t>(1) << max(wi + vi - offset, 0)) +
             ((wf + vf) << max(wi + vi - 1 - offset, 0)) +

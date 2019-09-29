@@ -110,7 +110,6 @@ public:
         lq1(c, x, y, n) = log_quant_fixed32<FB>(input, input_shape, lq1_top_shape)(c, x, y, n);
         schedule(lq1, to_expr(lq1_top_shape));
 
-        // Conv1(1x5x5x20): (1, 28, 28, n) -> (20, 24, 24, n)
         Func conv1("conv1");
         std::vector<int32_t> conv1_top_shape;
         conv1(c, x, y, n) = conv_qq_fixed32<Buffer<>, FB>(lq1, c1wq, c1b, conv1_weight_shape, 1, 0, input_shape, conv1_top_shape, true)(c, x, y, n);
