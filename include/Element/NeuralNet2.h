@@ -8,6 +8,8 @@
 
 #include "Util.h"
 
+#include "test_common.h"
+
 namespace Halide {
 namespace Element {
 namespace Cnn {

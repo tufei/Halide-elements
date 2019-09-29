@@ -12,12 +12,14 @@ using namespace Halide::Element::Cnn;
 typedef float ElemT;
 
 class MNIST : public Halide::Generator<MNIST> {
-    ImageParam in{Float(32), 4, "in"};
+    GeneratorInput<Buffer<float>> in{"in", 4};
 
     GeneratorParam<int32_t> batch_size{"batch_size", 128};
 
+    GeneratorOutput<Buffer<float>> out{"out", 2};
+
 public:
-    Func build()
+    void generate()
     {
         const std::vector<int32_t> input_shape{1, 28, 28, batch_size};
         // const std::string param_name = "data/LeNet.bin";
@@ -49,7 +51,8 @@ public:
         net.load(param_name);
         net.print_info();
 
-        return net.output();
+        Var c{"c"}, n{"n"};
+        out(c, n) = net.output()(c, n);
     }
 };
 
