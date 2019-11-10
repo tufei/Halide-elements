@@ -138,9 +138,14 @@ Func scanCost(Func cost, int32_t width, int32_t height, int32_t disp)
     return f;
 }
 
-Func semi_global_matching(Func in_l, Func in_r, int32_t width, int32_t height, int32_t disp)
+Func semi_global_matching(GeneratorInput<Buffer<uint8_t>> &src_l,
+                          GeneratorInput<Buffer<uint8_t>> &src_r,
+                          int32_t width, int32_t height, int32_t disp)
 {
+    Func in_l = src_l;
+    Func in_r = src_r;
     Var d, x, y;
+
     Func f0_l("census_left");
     f0_l(x, y) = census(lambda(_, in_l(_)), width, height)(x, y);
 
