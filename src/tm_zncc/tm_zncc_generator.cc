@@ -11,8 +11,8 @@ public:
     GeneratorInput<Buffer<T>> src0{"src0", 3};
     GeneratorInput<Buffer<T>> src1{"src1", 2};
 
-    GeneratorParam<int32_t> img_width{"img_width", 1024};
-    GeneratorParam<int32_t> img_height{"img_height", 768};
+    GeneratorParam<int32_t> img_width{"img_width", 256};
+    GeneratorParam<int32_t> img_height{"img_height", 192};
     GeneratorParam<int32_t> img_depth{"img_depth", 3};
     GeneratorParam<int32_t> tmp_width{"tmp_width", 16};
     GeneratorParam<int32_t> tmp_height{"tmp_height", 16};
