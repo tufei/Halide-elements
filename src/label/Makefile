@@ -16,15 +16,15 @@ HALIDE_ROOT?=/usr/local/
 HALIDE_BUILD?=${HALIDE_ROOT}
 
 HALIDE_TOOLS_DIR=${HALIDE_ROOT}/tools/
-HALIDE_LIB_CMAKE:=${HALIDE_BUILD}/lib
+HALIDE_LIB_CMAKE:=${HALIDE_BUILD}/lib64
 HALIDE_LIB_MAKE:=${HALIDE_BUILD}/bin
 ifeq ($(OS), Linux)
 	HALIDE_LIB:=libHalide.so
 else
 	HALIDE_LIB:=libHalide.dylib
 endif
-BUILD_BY_CMAKE:=$(shell ls ${HALIDE_LIB_CMAKE} | grep ${HALIDE_LIB})
-BUILD_BY_MAKE:=$(shell ls ${HALIDE_LIB_MAKE} | grep ${HALIDE_LIB})
+BUILD_BY_CMAKE:=$(shell ls ${HALIDE_LIB_CMAKE} | grep -x ${HALIDE_LIB})
+BUILD_BY_MAKE:=$(shell ls ${HALIDE_LIB_MAKE} | grep -x ${HALIDE_LIB})
 
 VIVADO_HLS_ROOT?=/opt/Xilinx/Vivado_HLS/2017.2/
 DRIVER_ROOT=./${PROG}.hls/${PROG}_zynq.sdk/design_1_wrapper_hw_platform_0/drivers/${PROG}_hp_wrapper_v1_0/src/
@@ -54,13 +54,13 @@ ${ANOTHER}_gen: ${ANOTHER}_generator.cc
 
 ${PROG}_gen.exec: ${PROG}_gen
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${PROG}_gen -o . \
-	-g label_u8 -e h,static_library target=x86-64-no_asserts;
+	-g label_u8 -e h,static_library target=host;
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${PROG}_gen -o . \
-	-g label_u16 -e h,static_library target=x86-64-no_asserts;
+	-g label_u16 -e h,static_library target=host;
 
 ${ANOTHER}_gen.exec: ${ANOTHER}_gen
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${ANOTHER}_gen -o . \
-	-g second_pass -e h,static_library target=x86-64-no_asserts;
+	-g second_pass -e h,static_library target=host;
 
 $(foreach type,${TYPE_LIST},${PROG}_${type}.a): ${PROG}_gen.exec
 $(foreach type,${TYPE_LIST},${PROG}_${type}.h): ${PROG}_gen.exec

@@ -12,15 +12,16 @@ HALIDE_ROOT?=/usr/local/
 HALIDE_BUILD?=${HALIDE_ROOT}
 
 HALIDE_TOOLS_DIR=${HALIDE_ROOT}/tools/
-HALIDE_LIB_CMAKE:=${HALIDE_BUILD}/lib
+HALIDE_LIB_CMAKE:=${HALIDE_BUILD}/lib64
 HALIDE_LIB_MAKE:=${HALIDE_BUILD}/bin
 ifeq ($(OS), Linux)
 	HALIDE_LIB:=libHalide.so
 else
 	HALIDE_LIB:=libHalide.dylib
 endif
-BUILD_BY_CMAKE:=$(shell ls ${HALIDE_LIB_CMAKE} | grep ${HALIDE_LIB})
-BUILD_BY_MAKE:=$(shell ls ${HALIDE_LIB_MAKE} | grep ${HALIDE_LIB})
+BUILD_BY_CMAKE:=$(shell ls ${HALIDE_LIB_CMAKE} | grep -x ${HALIDE_LIB})
+BUILD_BY_MAKE:=$(shell ls ${HALIDE_LIB_MAKE} | grep -x ${HALIDE_LIB})
+$(info $(BUILD_BY_CMAKE))
 
 VIVADO_HLS_ROOT?=/opt/Xilinx/Vivado_HLS/2017.2/
 DRIVER_ROOT=./${PROG}.hls/${PROG}_zynq.sdk/design_1_wrapper_hw_platform_0/drivers/${PROG}_hp_wrapper_v1_0/src/
@@ -48,15 +49,15 @@ ${PROG}_gen: ${PROG}_generator.cc
 ${PROG}_gen.exec: ${PROG}_gen
 ifdef TYPE_LIST
 ifeq ($(OS), Linux)
-	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=x86-64-no_asserts;)
+	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host;)
 else
-	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=x86-64-no_asserts;)
+	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host;)
 endif
 else
 ifeq ($(OS), Linux)
-	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host-no_asserts
+	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host
 else
-	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o .  -g ${PROG} -e h,static_library,stmt target=host-no_asserts
+	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o .  -g ${PROG} -e h,static_library,stmt target=host
 endif
 endif
 	@touch ${PROG}_gen.exec

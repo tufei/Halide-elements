@@ -659,7 +659,7 @@ template<> Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src, int32_t
                              exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) / (space * space)));
     schedule(kernel_d, {5, 5});
 
-    Func clamped = BoundaryConditions::repeat_edge(src, 0, width, 0, height, 0, depth);
+    Func clamped = BoundaryConditions::repeat_edge(src, {{0, width}, {0, height}, {0, depth}});
     Func bri;
     bri(x, y, c) = clamped(x-wRadius, y-wRadius, c);
 
@@ -700,7 +700,7 @@ template<> Func bilateral<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src, int32
                              exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) / (space * space)));
     schedule(kernel_d, {5, 5});
 
-    Func clamped = BoundaryConditions::repeat_edge(src, 0, width, 0, height, 0, depth);
+    Func clamped = BoundaryConditions::repeat_edge(src, {{0, width}, {0, height}, {0, depth}});
     Func bri;
     bri(x, y, c) = clamped(x-wRadius, y-wRadius, c);
 
