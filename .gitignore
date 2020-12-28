@@ -37,3 +37,19 @@
 
 # Editor swap file
 *.swp
+
+# Generated files
+*.stmt
+*.exec
+*.log
+*_gen
+*_test
+*_u8.h
+*_u16.h
+*_u32.h
+*_f32.h
+*_f64.h
+*_i8.h
+*_i16.h
+*_i32.h
+
