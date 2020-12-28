@@ -17,9 +17,7 @@ public:
 
     void generate()
     {
-        Func src_l = in_l;
-        Func src_r = in_r;
-        dst = semi_global_matching(src_l, src_r, width, height, disp);
+        dst = semi_global_matching(in_l, in_r, width, height, disp);
 
         schedule(in_l, {width, height});
         schedule(in_r, {width, height});

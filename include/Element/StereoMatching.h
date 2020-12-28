@@ -85,11 +85,8 @@ Func scanCost(Func cost, int32_t width, int32_t height, int32_t disp)
 {
     Var x("x"), y("y"), d("d");
 
-    Func lcost, f;
-    lcost(d, x, y) = Tuple(
-        cast<uint16_t>(0),
-        cast<uint16_t>(0)
-        );
+    Func lcost("lcost"), f("final_cost");
+    lcost(d, x, y) = Tuple(cast<uint16_t>(0), cast<uint16_t>(0));
 
     Expr PENALTY1 = cast<uint16_t>(20);
     Expr PENALTY2 = cast<uint16_t>(100);
@@ -99,39 +96,48 @@ Func scanCost(Func cost, int32_t width, int32_t height, int32_t disp)
     RVar rx = r[1];
     RVar ry = r[2];
 
-    Expr bx = FORWARD ? rx : width-1 - rx;
-    Expr by = FORWARD ? ry : height-1 - ry;
+    Expr bx = FORWARD ? rx : width - 1 - rx;
+    Expr by = FORWARD ? ry : height - 1 - ry;
     Expr px = bx - RX;
     Expr py = by - RY;
     Expr inside = py >= 0 && py < height && px >= 0 && px < width;
     Expr outside_x = px < 0 || px >= width;
     Expr outside_y = py < 0 || py >= height;
 
-    Expr minCost = select(outside_x, 0, outside_y, 0, likely(lcost(disp-1, px, py)[1]));
+    Expr cpx = clamp(px, 0, width - 1);
+    Expr cpy = clamp(py, 0, height - 1);
 
-    Expr cost0 = select(outside_x, 0, outside_y, 0, lcost(rd, px, py)[0]);
-    Expr cost1 = select(rd-1 < 0, INT32_MAX, outside_x, 0, outside_y, 0, likely(lcost(rd-1, px, py)[0]) + PENALTY1);
-    Expr cost2 = select(rd+1 >= disp, INT32_MAX, outside_x, 0, outside_y, 0, likely(lcost(rd+1, px, py)[0]) + PENALTY1);
+    Expr minCost = select(outside_x, 0,
+                          outside_y, 0,
+                          likely(lcost(disp - 1, cpx, cpy)[1]));
+
+    Expr cost0 = select(outside_x, 0, outside_y, 0, lcost(rd, cpx, cpy)[0]);
+    Expr cost1 = select(rd - 1 < 0, INT32_MAX,
+                        outside_x, 0, outside_y, 0,
+                        likely(lcost(clamp(rd - 1, 0, disp - 1), cpx, cpy)[0]) + PENALTY1);
+
+    Expr cost2 = select(rd + 1 >= disp, INT32_MAX,
+                        outside_x, 0,
+                        outside_y, 0,
+                        likely(lcost(clamp(rd + 1, 0, disp - 1), cpx, cpy)[0]) + PENALTY1);
+
     Expr cost3 = minCost + PENALTY2;
-    Expr pen = min( min(cost0, cost1), min(cost2, cost3) );
+    Expr pen = min(min(cost0, cost1), min(cost2, cost3));
 
     Expr newCost = select(inside,
-                            cast<uint16_t>(cost(rd, bx, by) + pen - minCost),
-                            cast<uint16_t>(cost(rd, bx, by))
-                            );
+                          cast<uint16_t>(cost(rd, bx, by) + pen - minCost),
+                          cast<uint16_t>(cost(rd, bx, by)));
 
-    lcost(rd, bx, by) = Tuple(
-        newCost,
-        cast<uint16_t>(select(rd-1 < 0,
-                                newCost,
-                                likely(lcost(rd-1, bx, by)[1]) > newCost, newCost, likely(lcost(rd-1, bx, by)[1])
-                                )
-                        )
-        );
+    lcost(rd, bx, by) =
+        Tuple(newCost,
+              cast<uint16_t>(select(rd - 1 < 0, newCost,
+                                    likely(lcost(clamp(rd - 1, 0, disp - 1), bx, by)[1]) > newCost, newCost,
+                                    likely(lcost(clamp(rd - 1, 0, disp - 1), bx, by)[1]))));
 
-    schedule(lcost, {disp, width, height})
-        .unroll(d)
-        .update().unroll(rd).allow_race_conditions();
+    schedule(lcost, {disp, width, height}).unroll(d)
+                                          .update()
+                                          .unroll(rd)
+                                          .allow_race_conditions();
 
     f(d, x, y) = lcost(d, x, y)[0];
 
@@ -142,8 +148,8 @@ Func semi_global_matching(GeneratorInput<Buffer<uint8_t>> &src_l,
                           GeneratorInput<Buffer<uint8_t>> &src_r,
                           int32_t width, int32_t height, int32_t disp)
 {
-    Func in_l = src_l;
-    Func in_r = src_r;
+    Func in_l = BoundaryConditions::repeat_edge(src_l);
+    Func in_r = BoundaryConditions::repeat_edge(src_r);
     Var d, x, y;
 
     Func f0_l("census_left");

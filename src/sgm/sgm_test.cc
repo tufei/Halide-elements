@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
         Buffer<uint8_t> out(width, height);
 
         sgm(in_l, in_r, out);
-        
+
         Buffer<uint8_t> disp = load_pgm("data/disp.pgm");
 
         save_pgm("out_test.pgm", out.data(), width, height);
