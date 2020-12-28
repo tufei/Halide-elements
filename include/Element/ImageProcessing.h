@@ -1342,12 +1342,13 @@ Func label_firstpass(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t heig
     final.compute_root();
 
     Func firstPass{"firstPass"};
-    copy(x, y) = select(final(x, y) == MAX, 0, final(x, y));
-    firstPass(x, y) = Tuple(copy(x, y), select(copy(x, y) == 0, 0,
-                            copy(x, y) < copy(x-1, y-1) ||
-                            copy(x, y) < copy(x, y-1) ||
-                            copy(x, y) < copy(x+1, y-1) ||
-                            copy(x, y) < copy(x-1, y), 1, 0));
+    copy(x, y) = cast<uint32_t>(select(final(x, y) == MAX, 0, final(x, y)));
+    firstPass(x, y) = Tuple(copy(x, y),
+                            cast<uint32_t>(select(copy(x, y) == 0, 0,
+                                                  copy(x, y) < copy(x-1, y-1) ||
+                                                  copy(x, y) < copy(x, y-1) ||
+                                                  copy(x, y) < copy(x+1, y-1) ||
+                                                  copy(x, y) < copy(x-1, y), 1, 0)));
     //firstPass.print_loop_nest();
     return firstPass;
 }

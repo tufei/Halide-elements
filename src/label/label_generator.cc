@@ -13,7 +13,7 @@ public:
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
 
-    GeneratorOutput<Buffer<>> dst{"dst", {Int(32), Int(32)}, 2};
+    GeneratorOutput<Buffer<>> dst{"dst", {UInt(32), UInt(32)}, 2};
 
     void generate() {
         dst = label_firstpass<T>(src, width, height);

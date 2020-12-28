@@ -188,7 +188,7 @@ int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
     try {
         bool printbuff = false;
         bool printtime = false;
-        
+
         const int32_t width = 1024;
         const int32_t height = 768;
         const std::vector<int32_t> extents{width, height};
