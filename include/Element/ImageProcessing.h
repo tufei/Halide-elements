@@ -139,7 +139,7 @@ template<typename TI, typename TK, uint32_t NB, uint32_t FB>
 Func convolution(GeneratorInput<Buffer<TI>> &in, int32_t width, int32_t height, int32_t depth, GeneratorInput<Buffer<TK>> &kernel, Expr kernel_size, int32_t unroll_factor) {
     Var x{"x"}, y{"y"}, c{"c"};
 
-    Func bounded = BoundaryConditions::repeat_edge(in, 0, width, 0, height, 0, depth);
+    Func bounded = BoundaryConditions::repeat_edge(in, {{0, width}, {0, height}, {0, depth}});
 
 #if 0
     Expr kh = Halide::div_round_to_zero(kernel_size, 2);
