@@ -1256,13 +1256,29 @@ Func warp_perspective_bicubic(GeneratorInput<Buffer<T>> &src, int32_t border_typ
 
     Expr i = srcy - 0.5f;
     Expr j = srcx - 0.5f;
+    /*
+     * FIXME: looks like the logic below is to truncate 'xf'/'yf' towards
+     * negative infinity, but the statements cause segmentation fault. yet to
+     * find out why it happens
+     */
+#if 1
+    Expr xf = cast<int>(j-1.0f) - 1;
+    Expr yf = cast<int>(i-1.0f) - 1;
+#else
     Expr xf = cast<int>(j-1.0f);
     Expr yf = cast<int>(i-1.0f);
     xf = xf - (xf > j-1.0f);
     yf = yf - (yf > i-1.0f);
+#endif
 
-    Func type0 = BoundaryConditions::constant_exterior(src, border_value, 0, width, 0, height, 0, depth);
-    Func type1 = BoundaryConditions::repeat_edge(src, 0, width, 0, height, 0, depth);
+    Func type0 = BoundaryConditions::constant_exterior(src, border_value,
+                                                       0, width,
+                                                       0, height,
+                                                       0, depth);
+    Func type1 = BoundaryConditions::repeat_edge(src,
+                                                 {{0, width},
+                                                  {0, height},
+                                                  {0, depth}});
 
     RDom r{0, 4, 0, 4, "r"};
     Expr d = cast<float>(select(border_type==1, type1(xf+r.x, yf+r.y, c), type0(xf+r.x, yf+r.y, c)));

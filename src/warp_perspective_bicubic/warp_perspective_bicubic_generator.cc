@@ -20,12 +20,15 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = warp_perspective_bicubic<T>(src, border_type, border_value, transform, width, height, depth);
+        dst = warp_perspective_bicubic<T>(src, border_type, border_value,
+                                          transform, width, height, depth);
         schedule(src, {width, height, depth});
         schedule(transform, {9});
         schedule(dst, {width, height, depth});
     }
 };
 
-HALIDE_REGISTER_GENERATOR(WarpPerspectiveBicubic<uint8_t>, warp_perspective_bicubic_u8);
-HALIDE_REGISTER_GENERATOR(WarpPerspectiveBicubic<uint16_t>, warp_perspective_bicubic_u16);
+HALIDE_REGISTER_GENERATOR(WarpPerspectiveBicubic<uint8_t>,
+                          warp_perspective_bicubic_u8);
+HALIDE_REGISTER_GENERATOR(WarpPerspectiveBicubic<uint16_t>,
+                          warp_perspective_bicubic_u16);
