@@ -21,7 +21,9 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = warp_map_bicubic<T>(src0, src1, src2, border_type, border_value, width, height, depth);
+        dst = warp_map_bicubic<T>(src0, src1, src2,
+                                  border_type, border_value,
+                                  width, height, depth);
         schedule(src0, {width, height, depth});
         schedule(src1, {width, height});
         schedule(src2, {width, height});

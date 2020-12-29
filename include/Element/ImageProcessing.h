@@ -863,7 +863,7 @@ Func warp_map_bilinear(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<fl
     yf = yf - (yf > i);
 
     Func type0 = BoundaryConditions::constant_exterior(src0, border_value, 0, width, 0, height, 0, depth);
-    Func type1 = BoundaryConditions::repeat_edge(src0, 0, width, 0, height, 0, depth);
+    Func type1 = BoundaryConditions::repeat_edge(src0, {{0, width}, {0, height}, {0, depth}});
     Expr d[4];
     d[0] = select(border_type==1, type1(xf, yf, c), type0(xf, yf, c));
     d[1] = select(border_type==1, type1(xf+1, yf, c), type0(xf+1, yf, c));
@@ -880,7 +880,11 @@ Func warp_map_bilinear(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<fl
 }
 
 template<typename T>
-Func warp_map_bicubic(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<float>> &src1, GeneratorInput<Buffer<float>> &src2, int32_t border_type, Expr border_value, int32_t width, int32_t height, int32_t depth)
+Func warp_map_bicubic(GeneratorInput<Buffer<T>> &src0,
+                      GeneratorInput<Buffer<float>> &src1,
+                      GeneratorInput<Buffer<float>> &src2,
+                      int32_t border_type, Expr border_value,
+                      int32_t width, int32_t height, int32_t depth)
 {
     Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
@@ -896,44 +900,61 @@ Func warp_map_bicubic(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<flo
 
     Expr i = srcy - 0.5f;
     Expr j = srcx - 0.5f;
+    /*
+     * FIXME: looks like the logic below is to truncate 'xf'/'yf' towards
+     * negative infinity, but the statements cause segmentation fault. yet to
+     * find out why it happens
+     */
+#if 1
+    Expr xf = cast<int>(j-1.0f) - 1;
+    Expr yf = cast<int>(i-1.0f) - 1;
+#else
     Expr xf = cast<int>(j-1.0f);
     Expr yf = cast<int>(i-1.0f);
     xf = xf - (xf > j-1.0f);
     yf = yf - (yf > i-1.0f);
+#endif
 
-    Func type0 = BoundaryConditions::constant_exterior(src0, border_value, 0, width, 0, height, 0, depth);
-    Func type1 = BoundaryConditions::repeat_edge(src0, 0, width, 0, height, 0, depth);
+    Func type0 = BoundaryConditions::constant_exterior(src0, border_value,
+                                                       0, width,
+                                                       0, height,
+                                                       0, depth);
+    Func type1 = BoundaryConditions::repeat_edge(src0,
+                                                 {{0, width},
+                                                  {0, height},
+                                                  {0, depth}});
 
     RDom r{0, 4, 0, 4, "r"};
-    Expr d = cast<float>(select(border_type==1,type1(xf+r.x, yf+r.y, c) ,type0(xf+r.x, yf+r.y, c)));
+    Expr d = cast<float>(select(border_type == 1,
+                                type1(xf+r.x, yf+r.y, c),
+                                type0(xf+r.x, yf+r.y, c)));
 
-    Expr dx = min(max(0.0f, j-cast<float>(xf)-1.0f), 1.0f);
-    Expr dy = min(max(0.0f, i-cast<float>(yf)-1.0f), 1.0f);
+    Expr dx = min(max(0.0f, j-xf-1.0f), 1.0f);
+    Expr dy = min(max(0.0f, i-yf-1.0f), 1.0f);
 
     static const float a = -0.75f;
     Expr w0 = ((a*(dx+1.0f)-5.0f*a)*(dx+1.0f)+8.0f*a)*(dx+1.0f)-4.0f*a;
     Expr w1 = ((a+2.0f)*dx-(a+3.0f))*dx*dx+1.0f;
     Expr w2 = ((a+2.0f)*(1.0f-dx)-(a+3.0f))*(1.0f-dx)*(1.0f-dx)+1.0f;
-    Expr w3 = 1.0f - w2 - w1 -w0;
+    Expr w3 = 1.0f - w2 - w1 - w0;
 
-    d = select(r.x == 0, d*w0,
-               r.x == 1, d*w1,
-               r.x == 2, d*w2,
-               r.x == 3, d*w3, d);
+    d = mux(r.x, {d * w0, d * w1, d * w2, d * w3});
 
     w0 = ((a*(dy+1.0f)-5.0f*a)*(dy+1.0f)+8.0f*a)*(dy+1.0f)-4.0f*a;
     w1 = ((a+2.0f)*dy-(a+3.0f))*dy*dy+1.0f;
     w2 = ((a+2.0f)*(1.0f-dy)-(a+3.0f))*(1.0f-dy)*(1.0f-dy)+1.0f;
     w3 = 1.0f - w2 - w1 -w0;
 
-    Expr c0 = sum(select(r.y ==0, d, 0))*w0;
-    Expr c1 = sum(select(r.y ==1, d, 0))*w1;
-    Expr c2 = sum(select(r.y ==2, d, 0))*w2;
-    Expr c3 = sum(select(r.y ==3, d, 0))*w3;
+    Expr c0 = sum(select(r.y == 0, d, 0))*w0;
+    Expr c1 = sum(select(r.y == 1, d, 0))*w1;
+    Expr c2 = sum(select(r.y == 2, d, 0))*w2;
+    Expr c3 = sum(select(r.y == 3, d, 0))*w3;
 
     Expr value = c0 + c1 + c2 + c3;
-    value = select(value > cast<float>(type_of<T>().max()), cast<float>(type_of<T>().max()),
-                   value < cast<float>(type_of<T>().min()), cast<float>(type_of<T>().min()),
+    value = select(value > cast<float>(type_of<T>().max()),
+                   cast<float>(type_of<T>().max()),
+                   value < cast<float>(type_of<T>().min()),
+                   cast<float>(type_of<T>().min()),
                    value + 0.5f);
     dst(x, y, c) = cast<T>(value);
 

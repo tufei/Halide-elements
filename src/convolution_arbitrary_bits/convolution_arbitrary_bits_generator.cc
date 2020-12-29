@@ -29,8 +29,8 @@ public:
 
     void generate() {
         out = convolution<uint8_t, int32_t, NB, FB>(in, width, height, depth,
-                                                     kernel, kernel_size,
-                                                     unroll_factor);
+                                                    kernel, kernel_size,
+                                                    unroll_factor);
 
         schedule(in, {width, height, depth});
         schedule(kernel, {5, 5});
