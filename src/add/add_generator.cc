@@ -16,8 +16,6 @@ public:
 
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-    Var x, y, c;
-
     void generate() {
       using upper_t = typename Halide::Element::Upper<T>::type;
 
@@ -26,9 +24,28 @@ public:
       Expr dstval = min(srcval0 + srcval1, cast<upper_t>(type_of<T>().max()));
 
       dst(x, y, c) = cast<T>(dstval);
-
-      dst.vectorize(x, Halide::Internal::GeneratorBase::natural_vector_size(dst.type())).parallel(y);
     }
+
+#if 0
+    void schedule() {
+        src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        src1.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+    }
+#else
+    void schedule() {
+        if (this->auto_schedule) {
+            src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            src1.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            dst.vectorize(x, Halide::Internal::GeneratorBase::natural_vector_size(dst.type())).parallel(y);
+        }
+    }
+#endif
+
+private:
+    Var x{"x"}, y{"y"}, c{"c"};
 };
 
 HALIDE_REGISTER_GENERATOR(Add<uint8_t>, add_u8);

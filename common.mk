@@ -11,7 +11,9 @@ endif
 HALIDE_ROOT?=/usr/local/
 HALIDE_BUILD?=${HALIDE_ROOT}
 
-HALIDE_TOOLS_DIR=${HALIDE_ROOT}/tools/
+AUTO_SCHEDULE?=false
+
+HALIDE_TOOLS_DIR=${HALIDE_ROOT}/tools
 HALIDE_LIB_CMAKE:=${HALIDE_BUILD}/lib64
 HALIDE_LIB_MAKE:=${HALIDE_BUILD}/bin
 ifeq ($(OS), Linux)
@@ -35,8 +37,8 @@ else ifeq (${BUILD_BY_MAKE}, ${HALIDE_LIB})
 	HALIDE_LIB_DIR=${HALIDE_LIB_MAKE}
 endif
 
-CXXFLAGS:=-O0 -g -std=c++11 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
-CSIM_CXXFLAGS:=-O0 -g -std=c++11 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
+CXXFLAGS:=-O2 -g -std=c++11 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
+CSIM_CXXFLAGS:=-O2 -g -std=c++11 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
 LIBS:=-ldl -lpthread -lz
 
 .PHONY: clean
@@ -49,13 +51,13 @@ ${PROG}_gen: ${PROG}_generator.cc
 ${PROG}_gen.exec: ${PROG}_gen
 ifdef TYPE_LIST
 ifeq ($(OS), Linux)
-	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host;)
+	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host -p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so -s Adams2019 auto_schedule=${AUTO_SCHEDULE} machine_params=8,8388608,40;)
 else
 	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host;)
 endif
 else
 ifeq ($(OS), Linux)
-	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host
+	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host -p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so -s Adams2019 auto_schedule=${AUTO_SCHEDULE} machine_params=8,8388608,40
 else
 	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o .  -g ${PROG} -e h,static_library,stmt target=host
 endif
