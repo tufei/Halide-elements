@@ -26,23 +26,19 @@ public:
       dst(x, y, c) = cast<T>(dstval);
     }
 
-#if 0
-    void schedule() {
-        src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
-        src1.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
-        dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
-    }
-#else
     void schedule() {
         if (this->auto_schedule) {
             src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             src1.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
         } else {
-            dst.vectorize(x, Halide::Internal::GeneratorBase::natural_vector_size(dst.type())).parallel(y);
+            Var x_outer, x_inner;
+            dst.split(x, x_outer, x_inner,
+                      Halide::Internal::GeneratorBase::natural_vector_size(dst.type()))
+               .vectorize(x_inner)
+               .parallel(y);
         }
     }
-#endif
 
 private:
     Var x{"x"}, y{"y"}, c{"c"};

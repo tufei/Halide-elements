@@ -6,6 +6,7 @@
 
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
+#include "halide_benchmark.h"
 
 #include "add_scalar_u8.h"
 #include "add_scalar_u16.h"
@@ -13,6 +14,7 @@
 
 #include "test_common.h"
 
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer, double _value, struct halide_buffer_t *_dst_buffer))
@@ -31,7 +33,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, double _value, struct 
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input, value, output);
+        const auto &result = benchmark([&]() {
+            func(input, value, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
           for (int y=0; y<height; ++y) {

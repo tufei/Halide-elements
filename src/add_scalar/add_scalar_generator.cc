@@ -18,16 +18,29 @@ public:
 
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
-    Var x, y, c;
-
     void generate() {
       Expr dstval = clamp(round(cast<double>(src(x, y, c)) + value), 0,
                           cast<double>(type_of<T>().max()));
 
       dst(x, y, c) = cast<T>(dstval);
-
-      dst.vectorize(x, Halide::Internal::GeneratorBase::natural_vector_size(dst.type())).parallel(y);
     }
+
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            value.set_estimate(1.0f);
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            Var x_outer, x_inner;
+            dst.split(x, x_outer, x_inner,
+                      Halide::Internal::GeneratorBase::natural_vector_size(dst.type()))
+               .vectorize(x_inner)
+               .parallel(y);
+        }
+    }
+
+private:
+    Var x{"x"}, y{"y"}, c{"c"};
 };
 
 HALIDE_REGISTER_GENERATOR(AddScalar<uint8_t>, add_scalar_u8);
