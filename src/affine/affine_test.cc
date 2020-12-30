@@ -5,9 +5,12 @@
 
 #include "affine.h"
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using std::string;
 using std::vector;
+
+using namespace Halide::Tools;
 
 int main()
 {
@@ -31,7 +34,11 @@ int main()
         float shift_y = 200.0f;
         float skew_y = 30.0f;
 
-        affine(input, degrees, scale_x, scale_y, shift_x, shift_y, skew_y, output);
+        const auto &result = benchmark([&]() {
+            affine(input, degrees, scale_x, scale_y,
+                   shift_x, shift_y, skew_y, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         // operations are applied in the following order:
         //   1. scale about the origin
         //   2. shear in y direction

@@ -22,8 +22,6 @@ public:
 
     GeneratorOutput<Buffer<uint8_t>> affine{"affine", 3};
 
-    Var x, y, c;
-
     void generate() {
         // This affine transformation applies these operations below for an input image.
         //   1. scale about the origin
@@ -100,7 +98,6 @@ public:
         //
         //   where Y = (x,y) and X = (tx, ty).
         //
-        Var x, y, c;
         Func tx("tx"), ty("ty");
         tx(x, y) = cast<int>((a00*x + a10*y + a20) / det);
         ty(x, y) = cast<int>((a01*x + a11*y + a21) / det);
@@ -111,9 +108,25 @@ public:
         Func limited = BoundaryConditions::constant_exterior(input, 255, 0, width, 0, height, 0, depth);
 
         affine(x, y, c) = limited(tx(x, y), ty(x, y), c);
-
-        affine.vectorize(x, Halide::Internal::GeneratorBase::natural_vector_size(affine.type())).parallel(y);
     }
+
+    void schedule() {
+        if (auto_schedule) {
+            input.set_estimates({{0, 768}, {0, 1280}, {0, 3}});
+            degrees.set_estimate(0.0f);
+            scale_x.set_estimate(1.0f);
+            scale_y.set_estimate(1.0f);
+            shift_x.set_estimate(0.0f);
+            shift_y.set_estimate(0.0f);
+            skew_y.set_estimate(0.0f);
+            affine.set_estimates({{0, 768}, {0, 1280}, {0, 3}});
+        } else {
+            affine.vectorize(x, Halide::Internal::GeneratorBase::natural_vector_size(affine.type())).parallel(y);
+        }
+    }
+
+private:
+    Var x{"x"}, y{"y"}, c{"c"};
 };
 
 HALIDE_REGISTER_GENERATOR(Affine, affine);
