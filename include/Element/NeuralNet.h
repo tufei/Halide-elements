@@ -957,8 +957,8 @@ Func bin_fc_fixed32(Func bottom, T weight, T alpha, T bias, const std::vector<in
 }
 
 // Softmax
-Func softmax(Func bottom, const std::vector<int32_t>& bottom_shape, std::vector<int32_t>& top_shape,
-               bool unrolled = false)
+Func softmax(Func bottom, const std::vector<int32_t>& bottom_shape,
+             std::vector<int32_t>& top_shape, bool unrolled = false)
 {
     Var c("c"), x("x"), y("y"), n("n");
     Func f, mins("mins"), norm("norm"), d("d");
@@ -997,6 +997,40 @@ Func softmax(Func bottom, const std::vector<int32_t>& bottom_shape, std::vector<
         norm.unroll(c);
         f.unroll(c);
     }
+
+    return f;
+}
+
+// Softmax
+Func softmax_pure(Func bottom, const std::vector<int32_t>& bottom_shape,
+                  std::vector<int32_t>& top_shape)
+{
+    Var c("c"), x("x"), y("y"), n("n");
+    Func f, mins("mins"), norm("norm"), d("d");
+    RDom r(0, bottom_shape[0]);
+    int dim = bottom.dimensions();
+
+    if (dim == 2) {
+        mins(n) = minimum_unroll(r, bottom(r.x, n));
+
+        norm(c, n) = exp(bottom(c, n) - mins(n));
+
+        d(n) = sum_unroll(r, norm(r.x, n));
+
+        f(c, n) = norm(c, n) / d(n);
+    } else if (dim == 4) {
+        mins(x, y, n) = minimum(r, bottom(r.x, x, y, n));
+
+        norm(c, x, y, n) = exp(bottom(c, x, y, n) - mins(x, y, n));
+
+        d(x, y, n) = sum(r, norm(r.x, x, y, n));
+
+        f(c, x, y, n) = norm(c, x, y, n) / d(x, y, n);
+    } else {
+        throw_assert(true, "unhandled dimensions");
+    }
+
+    top_shape = bottom_shape;
 
     return f;
 }

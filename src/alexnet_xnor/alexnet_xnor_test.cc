@@ -8,15 +8,16 @@
 
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
+#include "halide_benchmark.h"
 
 #include "test_common.h"
 
 #include "alexnet_xnor.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 namespace {
-
 
 template<typename Type>
 Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
@@ -31,7 +32,7 @@ Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
 
     std::vector<int> extents(dim);
 
-    for (size_t i=0; i<dim; i++) {
+    for (size_t i = 0; i < dim; i++) {
         uint32_t e;
         ifs.read(reinterpret_cast<char*>(&e), sizeof(e));
         extents[i] = static_cast<int>(e);
@@ -43,10 +44,10 @@ Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
     ifs.seekg(0, std::ifstream::end);
     std::ifstream::pos_type end = ifs.tellg();
 
-    ifs.seekg((1+dim)*sizeof(uint32_t), std::ifstream::beg);
+    ifs.seekg((1 + dim) * sizeof(uint32_t), std::ifstream::beg);
     std::ifstream::pos_type beg = ifs.tellg();
 
-    ifs.read(reinterpret_cast<char*>(buffer.data()), end-beg);
+    ifs.read(reinterpret_cast<char*>(buffer.data()), end - beg);
 
     return buffer;
 }
@@ -66,7 +67,8 @@ std::vector<size_t> argmax(const T* v, int class_num, size_t top_num)
         pairs.push_back(std::make_pair(v[i], i));
     }
 
-    std::partial_sort(pairs.begin(), pairs.begin() + top_num, pairs.end(), pair_compare<T>);
+    std::partial_sort(pairs.begin(), pairs.begin() + top_num, pairs.end(),
+                      pair_compare<T>);
 
     std::vector<size_t> result;
     for (auto i = decltype(top_num)(0); i < top_num; ++i) {
@@ -234,17 +236,18 @@ int main(int argc, char **argv) {
 
         Buffer<float> out(classes, batch_size);
 
-        alexnet_xnor(
-            in,
-            c1w, c1b, bn1m, bn1v, s1w, s1b,
-            bn2m, bn2v, s2w, s2b, c2w, c2a, c2b,
-            bn3m, bn3v, s3w, s3b, c3w, c3a, c3b,
-            bn4m, bn4v, s4w, s4b, c4w, c4a, c4b,
-            bn5m, bn5v, s5w, s5b, c5w, c5a, c5b,
-            bn6m, bn6v, s6w, s6b, f6w, f6a, f6b,
-            bn7m, bn7v, s7w, s7b, f7w, f7a, f7b,
-            bn8m, bn8v, s8w, s8b, f8w, f8b,
-            out);
+        const auto &result = benchmark([&]() {
+            alexnet_xnor(in,
+                         c1w, c1b, bn1m, bn1v, s1w, s1b,
+                         bn2m, bn2v, s2w, s2b, c2w, c2a, c2b,
+                         bn3m, bn3v, s3w, s3b, c3w, c3a, c3b,
+                         bn4m, bn4v, s4w, s4b, c4w, c4a, c4b,
+                         bn5m, bn5v, s5w, s5b, c5w, c5a, c5b,
+                         bn6m, bn6v, s6w, s6b, f6w, f6a, f6b,
+                         bn7m, bn7v, s7w, s7b, f7w, f7a, f7b,
+                         bn8m, bn8v, s8w, s8b, f8w, f8b,
+                         out); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         std::string label_file("data/synset_words.txt");
         classify(out, classes, batch_size, label_file);
@@ -256,3 +259,4 @@ int main(int argc, char **argv) {
     printf("Success!\n");
     return 0;
 }
+
