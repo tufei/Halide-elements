@@ -399,7 +399,9 @@ Func sub_scalar(GeneratorInput<Buffer<T>> &src, Expr val)
 }
 
 template<typename S, typename T>
-Func average_value(GeneratorInput<Buffer<S>> &src, GeneratorInput<Buffer<uint8_t>> &roi, int32_t width, int32_t height)
+Func average_value(GeneratorInput<Buffer<S>> &src,
+                   GeneratorInput<Buffer<uint8_t>> &roi,
+                   int32_t width, int32_t height)
 {
     Var x{"x"}, c{"c"};
     Func count{"count"}, dst{"dst"};
@@ -408,7 +410,25 @@ Func average_value(GeneratorInput<Buffer<S>> &src, GeneratorInput<Buffer<uint8_t
 
     count(x) = sum(select(roi(r.x, r.y) == 0, 0, 1));
     schedule(count, {1});
-    dst(x, c) = cast<T>(select(count(x)==0, 0, sum(cast<double>(src(r.x, r.y, c)))/count(x)));
+    dst(x, c) = cast<T>(select(count(x)==0, 0,
+                               sum(cast<double>(src(r.x, r.y, c)))/count(x)));
+
+    return dst;
+}
+
+template<typename S, typename T>
+Func average_value_pure(GeneratorInput<Buffer<S>> &src,
+                        GeneratorInput<Buffer<uint8_t>> &roi,
+                        int32_t width, int32_t height)
+{
+    Var x{"x"}, c{"c"};
+    Func count{"count"}, dst{"dst"};
+    RDom r{0, width, 0, height, "r"};
+    r.where(roi(r.x, r.y) != 0);
+
+    count(x) = sum(select(roi(r.x, r.y) == 0, 0, 1));
+    dst(x, c) = cast<T>(select(count(x)==0, 0,
+                               sum(cast<double>(src(r.x, r.y, c)))/count(x)));
 
     return dst;
 }

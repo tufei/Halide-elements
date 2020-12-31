@@ -10,10 +10,13 @@
 
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
+#include "halide_benchmark.h"
 #include "test_common.h"
 
 using std::string;
 using std::vector;
+
+using namespace Halide::Tools;
 
 template <typename S, typename D>
 int test(int (*func)(struct halide_buffer_t *_src_buffer,
@@ -32,7 +35,10 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
         auto input = mk_rand_buffer<S>(extents);
         auto output = mk_null_buffer<D>({1, depth});
 
-        func(input, roi, output);
+        const auto &result = benchmark([&]() {
+            func(input, roi, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         //reference
         D expect;
         for (int c = 0; c < depth; c++) {
