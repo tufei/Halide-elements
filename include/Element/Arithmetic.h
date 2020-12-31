@@ -95,8 +95,13 @@ Func average(GeneratorInput<Buffer<T>> &src, int32_t window_width, int32_t windo
     Var x{"x"}, y{"y"}, c{"c"};
 
     Func clamped = BoundaryConditions::repeat_edge(src);
+#if 1
+    Expr w_half = window_width / 2;
+    Expr h_half = window_height / 2;
+#else
     Expr w_half = div_round_to_zero(window_width, 2);
     Expr h_half = div_round_to_zero(window_height, 2);
+#endif
 
     RDom r(-w_half, window_width, -h_half, window_height);
 
