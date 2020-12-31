@@ -633,19 +633,27 @@ Func sad(GeneratorInput<Buffer<T>> &input0, GeneratorInput<Buffer<T>> &input1, i
 	return output;
 }
 
-template<typename T>Func bilateral(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth, Expr wSize, Expr color, Expr space)
+template<typename T>
+Func bilateral(GeneratorInput<Buffer<T>> &src,
+               int32_t width, int32_t height, int32_t depth,
+               Expr wSize, Expr color, Expr space)
 {
     return Func();
 }
 //for uint8_t and for uint16_t
 
-template<> Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src, int32_t width, int32_t height, int32_t depth, Expr wSize, Expr color, Expr space){
+template<>
+Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src,
+                        int32_t width, int32_t height, int32_t depth,
+                        Expr wSize, Expr color, Expr space)
+{
     Func dst{"dst"};
     Var x{"x"}, y{"y"}, c{"c"};
 
     Func kernel_r{"kernel_r"};
     Var i{"i"};
-    kernel_r(i) = exp(cast<double>(-0.5f) * cast<double>(i) * cast<double>(i)/ (color * color));
+    kernel_r(i) = exp(cast<double>(-0.5f) * cast<double>(i) *
+                      cast<double>(i) / (color * color));
     schedule(kernel_r, {256});
 
     Expr wRadius = cast<int>(wSize/2);
@@ -655,37 +663,47 @@ template<> Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src, int32_t
     Expr diff_y = cast<double>(y-wRadius);
     Expr r = sqrt(diff_y*diff_y + diff_x*diff_x);
     Func kernel_d;
-    kernel_d(x, y) = select( r > wRadius, 0,
-                             exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) / (space * space)));
+    kernel_d(x, y) = select(r > wRadius, 0,
+                            exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) /
+                                (space * space)));
     schedule(kernel_d, {5, 5});
 
-    Func clamped = BoundaryConditions::repeat_edge(src, {{0, width}, {0, height}, {0, depth}});
+    Func clamped = BoundaryConditions::repeat_edge(src,
+                                                   {{0, width},
+                                                    {0, height},
+                                                    {0, depth}});
     Func bri;
     bri(x, y, c) = clamped(x-wRadius, y-wRadius, c);
 
     Func num;
-    num(x, y, c) = sum_unroll(w, kernel_d(w.x, w.y)
-                    * select(src(x, y, c) > bri(x+w.x, y+w.y, c),
-                             kernel_r(src(x, y, c)-bri(x+w.x, y+w.y, c)),
-                             kernel_r(bri(x+w.x, y+w.y, c)-src(x, y, c)))
-                    * bri(w.x+x, w.y+y, c))
-                /sum_unroll(w, kernel_d(w.x, w.y)
-                     * select(src(x, y, c) > bri(x+w.x, y+w.y, c),
-                              kernel_r(src(x, y, c)-bri(x+w.x, y+w.y, c)),
-                              kernel_r(bri(x+w.x, y+w.y, c)-src(x, y, c))));
+    num(x, y, c) =
+        sum_unroll(w, kernel_d(w.x, w.y) *
+                   select(src(x, y, c) > bri(x+w.x, y+w.y, c),
+                          kernel_r(src(x, y, c)-bri(x+w.x, y+w.y, c)),
+                          kernel_r(bri(x+w.x, y+w.y, c)-src(x, y, c))) *
+                   bri(w.x+x, w.y+y, c)) /
+        sum_unroll(w, kernel_d(w.x, w.y) *
+                   select(src(x, y, c) > bri(x+w.x, y+w.y, c),
+                          kernel_r(src(x, y, c)-bri(x+w.x, y+w.y, c)),
+                          kernel_r(bri(x+w.x, y+w.y, c)-src(x, y, c))));
 
-    dst(x, y, c) = select(
-        cast<float>(num(x, y, c)-floor(num(x, y, c))-0.5f) > (std::numeric_limits<float>::epsilon)()
-        || (cast<uint8_t>(num(x, y, c)))%2==1,
-        cast<uint8_t>(num(x, y, c) + 0.5f),
-        cast<uint8_t>(num(x, y, c)));
+    dst(x, y, c) =
+        select(cast<float>(num(x, y, c) - floor(num(x, y, c)) - 0.5f) >
+               (std::numeric_limits<float>::epsilon)() ||
+               (cast<uint8_t>(num(x, y, c))) % 2 == 1,
+               cast<uint8_t>(num(x, y, c) + 0.5f),
+               cast<uint8_t>(num(x, y, c)));
 
     schedule(num, {width, height, depth});
 
     return dst;
 }
 
-template<> Func bilateral<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src, int32_t width, int32_t height, int32_t depth, Expr wSize, Expr color, Expr space){
+template<>
+Func bilateral<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src,
+                         int32_t width, int32_t height, int32_t depth,
+                         Expr wSize, Expr color, Expr space)
+{
     Func dst{"dst"};
     Var x{"x"}, y{"y"}, c{"c"};
 
@@ -694,34 +712,158 @@ template<> Func bilateral<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src, int32
 
     Expr diff_x = cast<double>(x-wRadius);
     Expr diff_y = cast<double>(y-wRadius);
-    Expr r = sqrt(diff_y*diff_y + diff_x*diff_x);
+    Expr r = sqrt(diff_y * diff_y + diff_x * diff_x);
     Func kernel_d;
-    kernel_d(x, y) = select( r > wRadius, 0,
-                             exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) / (space * space)));
+    kernel_d(x, y) = select(r > wRadius, 0,
+                            exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) /
+                                (space * space)));
     schedule(kernel_d, {5, 5});
 
-    Func clamped = BoundaryConditions::repeat_edge(src, {{0, width}, {0, height}, {0, depth}});
+    Func clamped = BoundaryConditions::repeat_edge(src,
+                                                   {{0, width},
+                                                    {0, height},
+                                                    {0, depth}});
+    Func bri;
+    bri(x, y, c) = clamped(x - wRadius, y - wRadius, c);
+
+    Func num;
+    num(x, y, c) =
+        sum_unroll(w, kernel_d(w.x, w.y) *
+                   exp(-0.5f *
+                       (cast<double>(src(x, y, c)) -
+                        cast<double>(bri(x + w.x, y + w.y, c))) *
+                       (cast<double>(src(x, y, c)) -
+                        cast<double>(bri(x + w.x, y + w.y, c))) / (color * color)) *
+                   bri(w.x + x, w.y + y, c)) /
+        sum_unroll(w, kernel_d(w.x, w.y) *
+                   exp(-0.5f *
+                       (cast<double>(src(x, y, c)) -
+                        cast<double>(bri(x + w.x, y + w.y, c))) *
+                       (cast<double>(src(x, y, c)) -
+                        cast<double>(bri(x + w.x, y + w.y, c))) / (color * color)));
+
+    dst(x, y, c) =
+        select(cast<float>(num(x, y, c) - floor(num(x, y, c)) - 0.5f) >
+               (std::numeric_limits<float>::epsilon)() ||
+               (cast<uint16_t>(num(x, y, c))) % 2 == 1,
+               cast<uint16_t>(num(x, y, c) + 0.5f),
+               cast<uint16_t>(num(x, y, c)));
+
+    schedule(num, {width, height, depth});
+
+    return dst;
+}
+
+template<typename T>
+Func bilateral_pure(GeneratorInput<Buffer<T>> &src,
+                    int32_t width, int32_t height, int32_t depth,
+                    Expr wSize, Expr color, Expr space)
+{
+    return Func();
+}
+//for uint8_t and for uint16_t
+
+template<>
+Func bilateral_pure<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src,
+                             int32_t width, int32_t height, int32_t depth,
+                             Expr wSize, Expr color, Expr space)
+{
+    Func dst{"dst"};
+    Var x{"x"}, y{"y"}, c{"c"};
+
+    Func kernel_r{"kernel_r"};
+    Var i{"i"};
+    kernel_r(i) = exp(cast<double>(-0.5f) * cast<double>(i) *
+                      cast<double>(i) / (color * color));
+
+    Expr wRadius = cast<int>(wSize/2);
+    RDom w{0, wSize, 0, wSize, "w"};
+
+    Expr diff_x = cast<double>(x-wRadius);
+    Expr diff_y = cast<double>(y-wRadius);
+    Expr r = sqrt(diff_y*diff_y + diff_x*diff_x);
+    Func kernel_d;
+    kernel_d(x, y) = select(r > wRadius, 0,
+                            exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) /
+                                (space * space)));
+
+    Func clamped = BoundaryConditions::repeat_edge(src,
+                                                   {{0, width},
+                                                    {0, height},
+                                                    {0, depth}});
     Func bri;
     bri(x, y, c) = clamped(x-wRadius, y-wRadius, c);
 
     Func num;
-    num(x, y, c) = sum_unroll(w, kernel_d(w.x, w.y)
-                    * exp(-0.5f * (cast<double>(src(x, y, c))-cast<double>(bri(x+w.x, y+w.y, c)))
-                                * (cast<double>(src(x, y, c))-cast<double>(bri(x+w.x, y+w.y, c)))
-                                / (color*color))
-                    * bri(w.x+x, w.y+y, c))
-                /sum_unroll(w, kernel_d(w.x, w.y)
-                     * exp(-0.5f * (cast<double>(src(x, y, c))-cast<double>(bri(x+w.x, y+w.y, c)))
-                                 * (cast<double>(src(x, y, c))-cast<double>(bri(x+w.x, y+w.y, c)))
-                                 / (color*color)));
+    num(x, y, c) =
+        sum_unroll(w, kernel_d(w.x, w.y) *
+                   select(src(x, y, c) > bri(x+w.x, y+w.y, c),
+                          kernel_r(src(x, y, c)-bri(x+w.x, y+w.y, c)),
+                          kernel_r(bri(x+w.x, y+w.y, c)-src(x, y, c))) *
+                   bri(w.x+x, w.y+y, c)) /
+        sum_unroll(w, kernel_d(w.x, w.y) *
+                   select(src(x, y, c) > bri(x+w.x, y+w.y, c),
+                          kernel_r(src(x, y, c)-bri(x+w.x, y+w.y, c)),
+                          kernel_r(bri(x+w.x, y+w.y, c)-src(x, y, c))));
 
-    dst(x, y, c) = select(
-        cast<float>(num(x, y, c)-floor(num(x, y, c))-0.5f) > (std::numeric_limits<float>::epsilon)()
-        || (cast<uint16_t>(num(x, y, c)))%2==1,
-        cast<uint16_t>(num(x, y, c) + 0.5f),
-        cast<uint16_t>(num(x, y, c)));
+    dst(x, y, c) =
+        select(cast<float>(num(x, y, c) - floor(num(x, y, c)) - 0.5f) >
+               (std::numeric_limits<float>::epsilon)() ||
+               (cast<uint8_t>(num(x, y, c))) % 2 == 1,
+               cast<uint8_t>(num(x, y, c) + 0.5f),
+               cast<uint8_t>(num(x, y, c)));
 
-    schedule(num, {width, height, depth});
+    return dst;
+}
+
+template<>
+Func bilateral_pure<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src,
+                              int32_t width, int32_t height, int32_t depth,
+                              Expr wSize, Expr color, Expr space)
+{
+    Func dst{"dst"};
+    Var x{"x"}, y{"y"}, c{"c"};
+
+    Expr wRadius = cast<int>(wSize/2);
+    RDom w{0, wSize, 0, wSize, "w"};
+
+    Expr diff_x = cast<double>(x-wRadius);
+    Expr diff_y = cast<double>(y-wRadius);
+    Expr r = sqrt(diff_y * diff_y + diff_x * diff_x);
+    Func kernel_d;
+    kernel_d(x, y) = select(r > wRadius, 0,
+                            exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) /
+                                (space * space)));
+
+    Func clamped = BoundaryConditions::repeat_edge(src,
+                                                   {{0, width},
+                                                    {0, height},
+                                                    {0, depth}});
+    Func bri;
+    bri(x, y, c) = clamped(x - wRadius, y - wRadius, c);
+
+    Func num;
+    num(x, y, c) =
+        sum_unroll(w, kernel_d(w.x, w.y) *
+                   exp(-0.5f *
+                       (cast<double>(src(x, y, c)) -
+                        cast<double>(bri(x + w.x, y + w.y, c))) *
+                       (cast<double>(src(x, y, c)) -
+                        cast<double>(bri(x + w.x, y + w.y, c))) / (color * color)) *
+                   bri(w.x + x, w.y + y, c)) /
+        sum_unroll(w, kernel_d(w.x, w.y) *
+                   exp(-0.5f *
+                       (cast<double>(src(x, y, c)) -
+                        cast<double>(bri(x + w.x, y + w.y, c))) *
+                       (cast<double>(src(x, y, c)) -
+                        cast<double>(bri(x + w.x, y + w.y, c))) / (color * color)));
+
+    dst(x, y, c) =
+        select(cast<float>(num(x, y, c) - floor(num(x, y, c)) - 0.5f) >
+               (std::numeric_limits<float>::epsilon)() ||
+               (cast<uint16_t>(num(x, y, c))) % 2 == 1,
+               cast<uint16_t>(num(x, y, c) + 0.5f),
+               cast<uint16_t>(num(x, y, c)));
 
     return dst;
 }

@@ -5,10 +5,13 @@
 
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
+#include "halide_benchmark.h"
 #include "test_common.h"
 
 #include "bilateral_u8.h"
 #include "bilateral_u16.h"
+
+using namespace Halide::Tools;
 
 #define BORDER_INTERPOLATE(x, l) (x < 0 ? 0 : (x >= l ? l - 1 : x))
 
@@ -116,7 +119,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input, window_size, sigma_color, sigma_space, output);
+        const auto &result = benchmark([&]() {
+            func(input, window_size, sigma_color, sigma_space, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         auto expect = mk_null_buffer<T>(extents);
         expect = bilateral_ref(expect, input, width, height, depth, window_size, sigma_color, sigma_space);

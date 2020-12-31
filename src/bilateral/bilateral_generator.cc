@@ -21,10 +21,26 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = bilateral<T>(src, width, height, depth, window_size, sigma_color, sigma_space);
+        if (this->auto_schedule) {
+            dst = bilateral_pure<T>(src, width, height, depth,
+                                    window_size, sigma_color, sigma_space);
+        } else {
+            dst = bilateral<T>(src, width, height, depth,
+                               window_size, sigma_color, sigma_space);
+        }
+    }
 
-        schedule(src, {width, height, depth});
-        schedule(dst, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            window_size.set_estimate(5);
+            sigma_color.set_estimate(2.0f);
+            sigma_space.set_estimate(1.0f);
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 
