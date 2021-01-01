@@ -173,8 +173,10 @@ Func conv_qr_fixed32(Func bottom, T weight, T bias,
 
 template <typename T, uint32_t FB>
 Func conv_qq_fixed32(Func bottom, T weight, T bias,
-                     const std::vector<int32_t>& weight_shape, int32_t stride, int32_t pad,
-                     const std::vector<int32_t>& bottom_shape, std::vector<int32_t>& top_shape,
+                     const std::vector<int32_t>& weight_shape,
+                     int32_t stride, int32_t pad,
+                     const std::vector<int32_t>& bottom_shape,
+                     std::vector<int32_t>& top_shape,
                      bool unroll = false)
 {
     Var x("x"), y("y"), c("c"), n("n");
@@ -197,7 +199,8 @@ Func conv_qq_fixed32(Func bottom, T weight, T bias,
     Expr v = in(r.x, x*stride - pad + r.y, y*stride - pad + r.z, n) & 0x7F;
     Expr vi = cast<uint8_t>(v >> 1);
     Expr vf = cast<int32_t>(v & 0x1);
-    Expr v_sign = (in(r.x, x*stride - pad + r.y, y*stride - pad + r.z, n) & 0x80) == 0x80;
+    Expr v_sign = (in(r.x, x*stride - pad + r.y, y*stride - pad + r.z, n) &
+                   0x80) == 0x80;
 
     Expr offset = cast<uint8_t>(Expr(FB));
 
@@ -229,13 +232,15 @@ Func conv_qq_fixed32(Func bottom, T weight, T bias,
 template <typename T, uint32_t FB>
 Func conv_qq_fixed32(Func bottom, T weight, T bias,
                      const std::vector<int32_t>& weight_shape,
-                     const std::vector<int32_t>& bottom_shape, std::vector<int32_t> &top_shape,
+                     const std::vector<int32_t>& bottom_shape,
+                     std::vector<int32_t> &top_shape,
                      bool unroll = false)
 {
     const int32_t stride = 1;
     const int32_t pad = weight_shape[1] / 2;
 
-    return conv_qq_fixed32<T, FB>(bottom, weight, bias, weight_shape, stride, pad, bottom_shape, top_shape, unroll);
+    return conv_qq_fixed32<T, FB>(bottom, weight, bias, weight_shape,
+                                  stride, pad, bottom_shape, top_shape, unroll);
 }
 
 template <typename T>
@@ -523,7 +528,9 @@ Func avgpool_fixed32(Func bottom, const std::vector<int32_t>& window_shape, int3
 }
 
 template<uint32_t FB>
-Func global_avgpool_fixed32(Func bottom, const std::vector<int32_t>& bottom_shape, std::vector<int32_t>& top_shape)
+Func global_avgpool_fixed32(Func bottom,
+                            const std::vector<int32_t>& bottom_shape,
+                            std::vector<int32_t>& top_shape)
 {
     Var x("x"), y("y"), c("c"), n("n");
 
@@ -543,7 +550,8 @@ Func global_avgpool_fixed32(Func bottom, const std::vector<int32_t>& bottom_shap
 
 
 // ReLU
-Func relu(Func bottom, const std::vector<int32_t>& bottom_shape, std::vector<int32_t>& top_shape)
+Func relu(Func bottom, const std::vector<int32_t>& bottom_shape,
+          std::vector<int32_t>& top_shape)
 {
     Var x("x"), y("y"), c("c"), n("n");
 
@@ -649,7 +657,9 @@ Func log_quant(Func bottom, const std::vector<int32_t>& bottom_shape, std::vecto
 }
 
 template <uint32_t FB>
-Func log_quant_fixed32(Func bottom, const std::vector<int32_t>& bottom_shape, std::vector<int32_t>& top_shape)
+Func log_quant_fixed32(Func bottom,
+                       const std::vector<int32_t>& bottom_shape,
+                       std::vector<int32_t>& top_shape)
 {
     Var i("i"), x("x"), y("y"), c("c"), n("n");
     Func f;
@@ -663,16 +673,24 @@ Func log_quant_fixed32(Func bottom, const std::vector<int32_t>& bottom_shape, st
     if (bottom.dimensions() == 2) {
         Fixed32 b = Fixed32{bottom(i, n)};
         b = select(b == zero, Fixed32{1}, b);
-        Expr v = select(b == zero, zero_v, cast<uint8_t>(logr2(static_cast<Expr>(abs(b)))));
+        Expr v = select(b == zero,
+                        zero_v,
+                        cast<uint8_t>(logr2(static_cast<Expr>(abs(b)))));
         // Mark sign bit to MSB.
-        Expr sign = select(bottom(i, n) < 0, make_const(UInt(8), 0x80), make_const(UInt(8), 0x00));
+        Expr sign = select(bottom(i, n) < 0,
+                           make_const(UInt(8), 0x80),
+                           make_const(UInt(8), 0x00));
         f(i, n) = sign | v;
     } else if (bottom.dimensions() == 4) {
         Fixed32 b = Fixed32{bottom(c, x, y, n)};
         b = select(b == zero, Fixed32{1}, b);
-        Expr v = select(b == zero, zero_v, cast<uint8_t>(logr2(static_cast<Expr>(abs(b)))));
+        Expr v = select(b == zero,
+                        zero_v,
+                        cast<uint8_t>(logr2(static_cast<Expr>(abs(b)))));
         // Mark sign bit to MSB.
-        Expr sign = select(bottom(c, x, y, n) < 0, make_const(UInt(8), 0x80), make_const(UInt(8), 0x00));
+        Expr sign = select(bottom(c, x, y, n) < 0,
+                           make_const(UInt(8), 0x80),
+                           make_const(UInt(8), 0x00));
         f(c, x, y, n) = sign | v;
     }
 
@@ -1113,9 +1131,12 @@ Func binconv_module(Func bottom, std::vector<int32_t>& bottom_shape, const std::
 }
 
 template <typename T, uint32_t FB>
-Func binconv_module_fixed32(Func bottom, const std::vector<int32_t>& bottom_shape, const std::string& suffix,
+Func binconv_module_fixed32(Func bottom,
+                            const std::vector<int32_t>& bottom_shape,
+                            const std::string& suffix,
                             T bn_mean, T bn_variance, T bn_weight, T bn_bias,
-                            T conv_weight, T conv_alpha, T conv_bias, const std::vector<int32_t> conv_weight_shape,
+                            T conv_weight, T conv_alpha, T conv_bias,
+                            const std::vector<int32_t> conv_weight_shape,
                             std::vector<int32_t>& top_shape,
                             bool unroll = false)
 {
@@ -1124,26 +1145,83 @@ Func binconv_module_fixed32(Func bottom, const std::vector<int32_t>& bottom_shap
     // Bn
     Func bn_f("bn" + suffix);
     std::vector<int32_t> bn_top_shape;
-    bn_f(c, x, y, n) = bn_fixed32<T, FB>(bottom, bn_mean, bn_variance, bottom_shape, bn_top_shape)(c, x, y, n);
+    bn_f(c, x, y, n) =
+        bn_fixed32<T, FB>(bottom, bn_mean, bn_variance,
+                          bottom_shape, bn_top_shape)(c, x, y, n);
 
     // Scale
     Func scale_f("scale" + suffix);
     std::vector<int32_t> scale_top_shape;
-    scale_f(c, x, y, n) = scale_fixed32<T, FB>(bn_f, bn_weight, bn_bias, bn_top_shape, scale_top_shape)(c, x, y, n);
+    scale_f(c, x, y, n) =
+        scale_fixed32<T, FB>(bn_f, bn_weight, bn_bias,
+                             bn_top_shape, scale_top_shape)(c, x, y, n);
     schedule(scale_f, to_expr(scale_top_shape));
 
     // BinActive
     Func active_f("active" + suffix);
     std::vector<int32_t> active_top_shape;
-    active_f(c, x, y, n) = bin_active_fixed32<FB>(scale_f, scale_top_shape, active_top_shape)(c, x, y, n);
+    active_f(c, x, y, n) =
+        bin_active_fixed32<FB>(scale_f, scale_top_shape,
+                               active_top_shape)(c, x, y, n);
     schedule(active_f, to_expr(active_top_shape));
 
     // Conv
     Func conv_f("conv" + suffix);
     std::vector<int32_t> conv_top_shape;
     conv_f(c, x, y, n) =
-        bin_conv_fixed32<T, FB>(active_f, conv_weight, conv_alpha, conv_bias, conv_weight_shape, active_top_shape, conv_top_shape, unroll)(c, x, y, n);
+        bin_conv_fixed32<T, FB>(active_f, conv_weight, conv_alpha, conv_bias,
+                                conv_weight_shape, active_top_shape,
+                                conv_top_shape, unroll)(c, x, y, n);
     schedule(conv_f, to_expr(conv_top_shape));
+
+    // ReLU:
+    Func relu_f("relu" + suffix);
+    std::vector<int32_t> relu_top_shape;
+    relu_f(c, x, y, n) = relu(conv_f, conv_top_shape, top_shape)(c, x, y, n);
+
+    return relu_f;
+}
+
+template <typename T, uint32_t FB>
+Func binconv_module_fixed32_pure(Func bottom,
+                                 const std::vector<int32_t>& bottom_shape,
+                                 const std::string& suffix,
+                                 T bn_mean, T bn_variance, T bn_weight, T bn_bias,
+                                 T conv_weight, T conv_alpha, T conv_bias,
+                                 const std::vector<int32_t> conv_weight_shape,
+                                 std::vector<int32_t>& top_shape,
+                                 bool unroll = false)
+{
+    Var x("x"), y("y"), c("c"), n("n");
+
+    // Bn
+    Func bn_f("bn" + suffix);
+    std::vector<int32_t> bn_top_shape;
+    bn_f(c, x, y, n) =
+        bn_fixed32<T, FB>(bottom, bn_mean, bn_variance,
+                          bottom_shape, bn_top_shape)(c, x, y, n);
+
+    // Scale
+    Func scale_f("scale" + suffix);
+    std::vector<int32_t> scale_top_shape;
+    scale_f(c, x, y, n) =
+        scale_fixed32<T, FB>(bn_f, bn_weight, bn_bias,
+                             bn_top_shape, scale_top_shape)(c, x, y, n);
+
+    // BinActive
+    Func active_f("active" + suffix);
+    std::vector<int32_t> active_top_shape;
+    active_f(c, x, y, n) =
+        bin_active_fixed32<FB>(scale_f, scale_top_shape,
+                               active_top_shape)(c, x, y, n);
+
+    // Conv
+    Func conv_f("conv" + suffix);
+    std::vector<int32_t> conv_top_shape;
+    conv_f(c, x, y, n) =
+        bin_conv_fixed32<T, FB>(active_f, conv_weight, conv_alpha, conv_bias,
+                                conv_weight_shape, active_top_shape,
+                                conv_top_shape, unroll)(c, x, y, n);
 
     // ReLU:
     Func relu_f("relu" + suffix);

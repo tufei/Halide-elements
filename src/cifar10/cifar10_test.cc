@@ -5,14 +5,14 @@
 #include <string>
 #include <vector>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "test_common.h"
+#include "halide_benchmark.h"
+
 
 #include "cifar10.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 template<typename Type>
 Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
@@ -87,7 +87,9 @@ int main(int argc, char **argv) {
 
         Buffer<float> out(classes, batch_size);
 
-        cifar10(in, out);
+        const auto &result = benchmark([&]() {
+            cifar10(in, out); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         Buffer<int64_t> labels = load_data<int64_t>("data/test_label.bin");
 
