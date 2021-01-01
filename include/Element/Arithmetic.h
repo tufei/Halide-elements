@@ -282,7 +282,8 @@ Func cmpgt(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
     Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst{"dst"};
-    dst(x, y, c) = cast<T>(select(src0(x, y, c) > src1(x, y, c), type_of<T>().max(), 0));
+    dst(x, y, c) = cast<T>(select(src0(x, y, c) > src1(x, y, c),
+                                  type_of<T>().max(), 0));
 
     return dst;
 }
@@ -293,7 +294,8 @@ Func cmpge(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
     Var x{"x"}, y{"y"}, c{"c"};
 
     Func dst{"dst"};
-    dst(x, y, c) = cast<T>(select(src0(x, y, c) >= src1(x, y, c), type_of<T>().max(), 0));;
+    dst(x, y, c) = cast<T>(select(src0(x, y, c) >= src1(x, y, c),
+                                  type_of<T>().max(), 0));;
 
     return dst;
 }
