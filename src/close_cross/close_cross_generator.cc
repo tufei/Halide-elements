@@ -21,18 +21,42 @@ public:
   GeneratorOutput<Buffer<T>> erode_crossed{"erode_crossed", 3};
 
   void generate() {
-    Func dilate_crossed{"dilate_crossed"};
+      if (this->auto_schedule) {
+        // Run dilate
+        dilate_crossed =
+            dilate_cross_pure<T>(input, width, height, depth,
+                                 window_width, window_height, iteration);
 
-    // Run dilate
-    dilate_crossed = dilate_cross<T>(input, width, height, depth, window_width, window_height, iteration);
+        // Run erode
+        erode_crossed =
+            erode_cross_pure<T>(dilate_crossed, width, height, depth,
+                                window_width, window_height, iteration);
+      } else {
+        // Run dilate
+        dilate_crossed =
+            dilate_cross<T>(input, width, height, depth,
+                            window_width, window_height, iteration);
 
-    // Run erode
-    erode_crossed = erode_cross<T>(dilate_crossed, width, height, depth, window_width, window_height, iteration);
-
-    schedule(input, {width, height, depth});
-    schedule(dilate_crossed, {width, height, depth});
-    schedule(erode_crossed, {width, height, depth});
+        // Run erode
+        erode_crossed =
+            erode_cross<T>(dilate_crossed, width, height, depth,
+                           window_width, window_height, iteration);
+      }
   }
+
+  void schedule() {
+      if (this->auto_schedule) {
+          input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+          erode_crossed.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+      } else {
+        ::schedule(input, {width, height, depth});
+        ::schedule(dilate_crossed, {width, height, depth});
+        ::schedule(erode_crossed, {width, height, depth});
+      }
+  }
+
+private:
+    Func dilate_crossed{"dilate_crossed"};
 };
 
 HALIDE_REGISTER_GENERATOR(CloseCross<uint8_t>, close_cross_u8);

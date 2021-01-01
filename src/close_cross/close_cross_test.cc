@@ -4,13 +4,13 @@
 #include <exception>
 #include <climits>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "close_cross_u8.h"
 #include "close_cross_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 // returns index of result workbuf
 template<typename T>
@@ -82,7 +82,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
                                     &workbuf[0][0][0][0], static_cast<const T&(*)(const T&, const T&)>(std::min), std::numeric_limits<T>::max(), 0);
         expect = &(workbuf[k%2]);
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
