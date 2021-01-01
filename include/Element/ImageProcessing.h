@@ -136,10 +136,18 @@ Func gaussian(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height, int3
 }
 
 template<typename TI, typename TK, uint32_t NB, uint32_t FB>
-Func convolution(GeneratorInput<Buffer<TI>> &in, int32_t width, int32_t height, int32_t depth, GeneratorInput<Buffer<TK>> &kernel, Expr kernel_size, int32_t unroll_factor) {
+Func convolution(GeneratorInput<Buffer<TI>> &in,
+                 int32_t width, int32_t height, int32_t depth,
+                 GeneratorInput<Buffer<TK>> &kernel,
+                 Expr kernel_size, int32_t unroll_factor)
+{
     Var x{"x"}, y{"y"}, c{"c"};
 
-    Func bounded = BoundaryConditions::repeat_edge(in, {{0, width}, {0, height}, {0, depth}});
+    Func bounded =
+        BoundaryConditions::repeat_edge(in,
+                                        {{0, width},
+                                         {0, height},
+                                         {0, depth}});
 
 #if 0
     Expr kh = Halide::div_round_to_zero(kernel_size, 2);
@@ -168,6 +176,43 @@ Func convolution(GeneratorInput<Buffer<TI>> &in, int32_t width, int32_t height, 
     return out;
 }
 
+template<typename TI, typename TK, uint32_t NB, uint32_t FB>
+Func convolution_pure(GeneratorInput<Buffer<TI>> &in,
+                      int32_t width, int32_t height, int32_t depth,
+                      GeneratorInput<Buffer<TK>> &kernel,
+                      Expr kernel_size, int32_t unroll_factor)
+{
+    Var x{"x"}, y{"y"}, c{"c"};
+
+    Func bounded =
+        BoundaryConditions::repeat_edge(in,
+                                        {{0, width},
+                                         {0, height},
+                                         {0, depth}});
+
+#if 0
+    Expr kh = Halide::div_round_to_zero(kernel_size, 2);
+    RDom r(0, kernel_size, 0, kernel_size);
+#else
+    Expr kh = cast<int>(kernel_size/2);
+    RDom r{0, kernel_size, 0, kernel_size};
+#endif
+
+    Expr dx = r.x - kh;
+    Expr dy = r.y - kh;
+
+    Func k;
+    k(x, y) = kernel(x, y);
+
+    using FixedNB = FixedN<NB, FB>;
+    FixedNB pv = to_fixed<NB, FB>(bounded(x+dx, y+dy, c));
+    FixedNB kv{k(r.x, r.y)};
+
+    Func out("out");
+    out(x, y, c) = from_fixed<uint8_t>(sum_unroll(r, pv * kv));
+
+    return out;
+}
 
 template<uint32_t frac_bits>
 Func gamma_correction(Func in, GeneratorInput<float> &value)

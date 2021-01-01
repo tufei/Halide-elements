@@ -2,14 +2,13 @@
 #include <iostream>
 #include <exception>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "convolution.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 int main(int argc, char **argv) {
     try {
@@ -18,7 +17,7 @@ int main(int argc, char **argv) {
         const int height = 512;
         const int depth = 3;
         Buffer<uint8_t> input = mk_const_buffer<uint8_t>({width, height, depth}, 1);
-                
+
         using fixed16_t = int16_t;
         constexpr uint32_t frac_bits = 10;
         const fixed16_t kv = static_cast<fixed16_t>(round(1.0f * (1 << frac_bits)));
@@ -34,7 +33,9 @@ int main(int argc, char **argv) {
 
         Buffer<uint8_t> output(width, height, depth);
 
-        convolution(input, kernel, 3, output);
+        const auto &result = benchmark([&]() {
+            convolution(input, kernel, 3, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {

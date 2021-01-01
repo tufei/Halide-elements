@@ -20,14 +20,31 @@ public:
     GeneratorOutput<Buffer<uint8_t>> out{"out", 3};
 
     void generate() {
-        out = convolution<uint8_t, int16_t, 16, 10>(in, width, height, depth, kernel, kernel_size, unroll_factor);
+        if (auto_schedule) {
+            out = convolution_pure<uint8_t, int16_t, 16, 10>(in, width, height, depth,
+                                                             kernel, kernel_size,
+                                                             unroll_factor);
+        } else {
+            out = convolution<uint8_t, int16_t, 16, 10>(in, width, height, depth,
+                                                        kernel, kernel_size,
+                                                        unroll_factor);
+        }
+    }
 
-        schedule(in, {width, height, depth});
-        schedule(kernel, {5, 5});
-        schedule(out, {width, height, depth});
+    void schedule() {
+        if (auto_schedule) {
+            in.set_estimates({{0, 512}, {0, 512}, {0, 3}});
+            kernel.set_estimates({{0, 5}, {0, 5}});
+            kernel_size.set_estimate(3);
+            out.set_estimates({{0, 512}, {0, 512}, {0, 3}});
+        } else {
+            ::schedule(in, {width, height, depth});
+            ::schedule(kernel, {5, 5});
+            ::schedule(out, {width, height, depth});
 
-        if (unroll_factor) {
-            out.unroll(out.args()[0], unroll_factor);
+            if (unroll_factor) {
+                out.unroll(out.args()[0], unroll_factor);
+            }
         }
     }
 };
