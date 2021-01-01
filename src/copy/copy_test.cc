@@ -6,9 +6,12 @@
 #include "copy_u8.h"
 #include "copy_u16.h"
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using std::string;
 using std::vector;
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t *_dst_buffer))
@@ -26,7 +29,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
