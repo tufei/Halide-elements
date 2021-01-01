@@ -55,6 +55,12 @@ public:
     GeneratorOutput<Buffer<float>> tof{"tof", 2};
 
     void generate() {
+        if (auto_schedule) {
+            pf_binconv_module_fixed32 = binconv_module_fixed32_pure<Buffer<>, FB>;
+        } else {
+            pf_binconv_module_fixed32 = binconv_module_fixed32<Buffer<>, FB>;
+        }
+
         input_shape[3] = batch_size;
 
         Buffer<> c11w(load_bin<int32_t>("./data/conv1_1_weight.bin", &c11w_shape));
@@ -164,160 +170,73 @@ public:
 
         // Module1_2(192x1x1x160): (192, 32, 32, n) -> (160, 32, 32, n)
         std::vector<int32_t> conv1_2_top_shape;
-        if (auto_schedule) {
-            Func conv1_2 =
-                binconv_module_fixed32_pure<Buffer<>, FB>(relu1_1,
-                                                          relu1_1_top_shape,
-                                                          "1_2", bn12m, bn12v,
-                                                          bn12w, bn12b, c12w,
-                                                          c12a, c12b,
-                                                          c12w_shape,
-                                                          conv1_2_top_shape);
+        Func conv1_2 =
+            pf_binconv_module_fixed32(relu1_1, relu1_1_top_shape, "1_2",
+                                      bn12m, bn12v, bn12w, bn12b,
+                                      c12w, c12a, c12b, c12w_shape,
+                                      conv1_2_top_shape, false);
 
-            // Module1_3(160x1x1x96): (160, 32, 32, n) -> (96, 32, 32, n)
-            conv1_3 =
-                binconv_module_fixed32_pure<Buffer<>, FB>(conv1_2,
-                                                          conv1_2_top_shape,
-                                                          "1_3", bn13m, bn13v,
-                                                          bn13w, bn13b, c13w,
-                                                          c13a, c13b,
-                                                          c13w_shape,
-                                                          conv1_3_top_shape);
+        // Module1_3(160x1x1x96): (160, 32, 32, n) -> (96, 32, 32, n)
+        conv1_3 =
+            pf_binconv_module_fixed32(conv1_2, conv1_2_top_shape, "1_3",
+                                      bn13m, bn13v, bn13w, bn13b,
+                                      c13w, c13a, c13b, c13w_shape,
+                                      conv1_3_top_shape, false);
 
-            // Pool1(3x3, 2): (96, 32, 32, n) -> (96, 16, 16, n)
-            Func pool1("pool1");
-            std::vector<int32_t> pool1_top_shape;
-            pool1(c, x, y, n) =
-                pool_fixed32<FB>(conv1_3, {3, 3}, 2, 1, conv1_3_top_shape,
-                                 pool1_top_shape)(c, x, y, n);
+        // Pool1(3x3, 2): (96, 32, 32, n) -> (96, 16, 16, n)
+        Func pool1("pool1");
+        std::vector<int32_t> pool1_top_shape;
+        pool1(c, x, y, n) =
+            pool_fixed32<FB>(conv1_3, {3, 3}, 2, 1, conv1_3_top_shape,
+                             pool1_top_shape)(c, x, y, n);
 
-            // Module2_1(96x5x5x192): (96, 16, 16, n) -> (192, 16, 16, n)
-            std::vector<int32_t> conv2_1_top_shape;
-            Func conv2_1 =
-                binconv_module_fixed32_pure<Buffer<>, FB>(pool1,
-                                                          pool1_top_shape,
-                                                          "2_1", bn21m, bn21v,
-                                                          bn21w, bn21b, c21w,
-                                                          c21a, c21b,
-                                                          c21w_shape,
-                                                          conv2_1_top_shape);
+        // Module2_1(96x5x5x192): (96, 16, 16, n) -> (192, 16, 16, n)
+        std::vector<int32_t> conv2_1_top_shape;
+        Func conv2_1 =
+            pf_binconv_module_fixed32(pool1, pool1_top_shape, "2_1",
+                                      bn21m, bn21v, bn21w, bn21b,
+                                      c21w, c21a, c21b, c21w_shape,
+                                      conv2_1_top_shape, false);
 
-            // Module2_2(192x1x1x192): (192, 16, 16, n) -> (192, 16, 16, n)
-            std::vector<int32_t> conv2_2_top_shape;
-            Func conv2_2 =
-                binconv_module_fixed32_pure<Buffer<>, FB>(conv2_1,
-                                                          conv2_1_top_shape,
-                                                          "2_2", bn22m, bn22v,
-                                                          bn22w, bn22b, c22w,
-                                                          c22a, c22b,
-                                                          c22w_shape,
-                                                          conv2_2_top_shape);
+        // Module2_2(192x1x1x192): (192, 16, 16, n) -> (192, 16, 16, n)
+        std::vector<int32_t> conv2_2_top_shape;
+        Func conv2_2 =
+            pf_binconv_module_fixed32(conv2_1, conv2_1_top_shape, "2_2",
+                                      bn22m, bn22v, bn22w, bn22b,
+                                      c22w, c22a, c22b, c22w_shape,
+                                      conv2_2_top_shape, false);
 
-            // Module2_3(192x1x1x160): (192, 16, 16, n) -> (192, 16, 16, n)
-            conv2_3 =
-                binconv_module_fixed32_pure<Buffer<>, FB>(conv2_2,
-                                                          conv2_2_top_shape,
-                                                          "2_3", bn23m, bn23v,
-                                                          bn23w, bn23b, c23w,
-                                                          c23a, c23b,
-                                                          c23w_shape,
-                                                          conv2_3_top_shape);
+        // Module2_3(192x1x1x160): (192, 16, 16, n) -> (192, 16, 16, n)
+        conv2_3 =
+            pf_binconv_module_fixed32(conv2_2, conv2_2_top_shape, "2_3",
+                                      bn23m, bn23v, bn23w, bn23b,
+                                      c23w, c23a, c23b, c23w_shape,
+                                      conv2_3_top_shape, false);
 
-            // Pool2(3x3, 2): (192, 16, 16, n) -> (192, 8, 8, n)
-            Func pool2("pool2");
-            std::vector<int32_t> pool2_top_shape;
-            pool2(c, x, y, n) =
-                avgpool_fixed32<FB>(conv2_3, {3, 3}, 2, 1, conv2_3_top_shape,
-                                    pool2_top_shape)(c, x, y, n);
+        // Pool2(3x3, 2): (192, 16, 16, n) -> (192, 8, 8, n)
+        Func pool2("pool2");
+        std::vector<int32_t> pool2_top_shape;
+        pool2(c, x, y, n) =
+            avgpool_fixed32<FB>(conv2_3, {3, 3}, 2, 1, conv2_3_top_shape,
+                                pool2_top_shape)(c, x, y, n);
 
 
-            // Module3_1(192x3x3x192): (192, 8, 8, n) -> (192, 8, 8, n)
-            std::vector<int32_t> conv3_1_top_shape;
-            Func conv3_1 =
-                binconv_module_fixed32_pure<Buffer<>, FB>(pool2,
-                                                          pool2_top_shape,
-                                                          "3_1", bn31m, bn31v,
-                                                          bn31w, bn31b, c31w,
-                                                          c31a, c31b,
-                                                          c31w_shape,
-                                                          conv3_1_top_shape);
+        // Module3_1(192x3x3x192): (192, 8, 8, n) -> (192, 8, 8, n)
+        std::vector<int32_t> conv3_1_top_shape;
+        Func conv3_1 =
+            pf_binconv_module_fixed32(pool2, pool2_top_shape, "3_1",
+                                      bn31m, bn31v, bn31w, bn31b,
+                                      c31w, c31a, c31b, c31w_shape,
+                                      conv3_1_top_shape, false);
 
-            // Module3_2(192x1x1x192): (192, 8, 8, n) -> (192, 8, 8, n)
-            conv3_2 =
-                binconv_module_fixed32_pure<Buffer<>, FB>(conv3_1,
-                                                          conv3_1_top_shape,
-                                                          "3_2", bn32m, bn32v,
-                                                          bn32w, bn32b, c32w,
-                                                          c32a, c32b,
-                                                          c32w_shape,
-                                                          conv3_2_top_shape);
-        } else {
-            Func conv1_2 =
-                binconv_module_fixed32<Buffer<>, FB>(relu1_1, relu1_1_top_shape,
-                                                     "1_2", bn12m, bn12v, bn12w,
-                                                     bn12b, c12w, c12a, c12b,
-                                                     c12w_shape, conv1_2_top_shape);
-
-            // Module1_3(160x1x1x96): (160, 32, 32, n) -> (96, 32, 32, n)
-            conv1_3 =
-                binconv_module_fixed32<Buffer<>, FB>(conv1_2, conv1_2_top_shape,
-                                                     "1_3", bn13m, bn13v, bn13w,
-                                                     bn13b, c13w, c13a, c13b,
-                                                     c13w_shape, conv1_3_top_shape);
-
-            // Pool1(3x3, 2): (96, 32, 32, n) -> (96, 16, 16, n)
-            Func pool1("pool1");
-            std::vector<int32_t> pool1_top_shape;
-            pool1(c, x, y, n) =
-                pool_fixed32<FB>(conv1_3, {3, 3}, 2, 1, conv1_3_top_shape,
-                                 pool1_top_shape)(c, x, y, n);
-
-            // Module2_1(96x5x5x192): (96, 16, 16, n) -> (192, 16, 16, n)
-            std::vector<int32_t> conv2_1_top_shape;
-            Func conv2_1 =
-                binconv_module_fixed32<Buffer<>, FB>(pool1, pool1_top_shape,
-                                                     "2_1", bn21m, bn21v, bn21w,
-                                                     bn21b, c21w, c21a, c21b,
-                                                     c21w_shape, conv2_1_top_shape);
-
-            // Module2_2(192x1x1x192): (192, 16, 16, n) -> (192, 16, 16, n)
-            std::vector<int32_t> conv2_2_top_shape;
-            Func conv2_2 =
-                binconv_module_fixed32<Buffer<>, FB>(conv2_1, conv2_1_top_shape,
-                                                     "2_2", bn22m, bn22v, bn22w,
-                                                     bn22b, c22w, c22a, c22b,
-                                                     c22w_shape, conv2_2_top_shape);
-
-            // Module2_3(192x1x1x160): (192, 16, 16, n) -> (192, 16, 16, n)
-            conv2_3 =
-                binconv_module_fixed32<Buffer<>, FB>(conv2_2, conv2_2_top_shape,
-                                                     "2_3", bn23m, bn23v, bn23w,
-                                                     bn23b, c23w, c23a, c23b,
-                                                     c23w_shape, conv2_3_top_shape);
-
-            // Pool2(3x3, 2): (192, 16, 16, n) -> (192, 8, 8, n)
-            Func pool2("pool2");
-            std::vector<int32_t> pool2_top_shape;
-            pool2(c, x, y, n) =
-                avgpool_fixed32<FB>(conv2_3, {3, 3}, 2, 1, conv2_3_top_shape,
-                                    pool2_top_shape)(c, x, y, n);
-
-
-            // Module3_1(192x3x3x192): (192, 8, 8, n) -> (192, 8, 8, n)
-            std::vector<int32_t> conv3_1_top_shape;
-            Func conv3_1 =
-                binconv_module_fixed32<Buffer<>, FB>(pool2, pool2_top_shape,
-                                                     "3_1", bn31m, bn31v, bn31w,
-                                                     bn31b, c31w, c31a, c31b,
-                                                     c31w_shape, conv3_1_top_shape);
-
-            // Module3_2(192x1x1x192): (192, 8, 8, n) -> (192, 8, 8, n)
-            conv3_2 =
-                binconv_module_fixed32<Buffer<>, FB>(conv3_1, conv3_1_top_shape,
-                                                     "3_2", bn32m, bn32v, bn32w,
-                                                     bn32b, c32w, c32a, c32b,
-                                                     c32w_shape, conv3_2_top_shape);
-        }
+        // Module3_2(192x1x1x192): (192, 8, 8, n) -> (192, 8, 8, n)
+        Func conv3_2{"conv3_2"};
+        std::vector<int32_t> conv3_2_top_shape;
+        conv3_2 =
+            pf_binconv_module_fixed32(conv3_1, conv3_1_top_shape, "3_2",
+                                      bn32m, bn32v, bn32w, bn32b,
+                                      c32w, c32a, c32b, c32w_shape,
+                                      conv3_2_top_shape, false);
 
         // Bn3_3
         Func bn3_3("bn3_3");
@@ -371,8 +290,6 @@ public:
     }
 
 private:
-    Var x{"x"}, y{"y"}, c{"c"}, n{"n"};
-
     std::vector<int32_t> input_shape{3, 32, 32, 1};
 
     std::vector<int32_t> c11w_shape{3, 5, 5, 192};
@@ -396,6 +313,14 @@ private:
 
     constexpr static uint32_t FB = 20;
 
+    Func (*pf_binconv_module_fixed32)(Func, const std::vector<int32_t>&,
+                                      const std::string&,
+                                      Buffer<>, Buffer<>, Buffer<>, Buffer<>,
+                                      Buffer<>, Buffer<>, Buffer<>,
+                                      const std::vector<int32_t>,
+                                      std::vector<int32_t>&, bool);
+
+    Var x{"x"}, y{"y"}, c{"c"}, n{"n"};
     Func input{"input"};
 
     Func lq1_1{"lq1_1"};
@@ -409,9 +334,6 @@ private:
 
     Func lq3_3{"lq3_3"};
     std::vector<int32_t> lq3_3_top_shape;
-
-    Func conv3_2{"conv3_2"};
-    std::vector<int32_t> conv3_2_top_shape;
 
     Func relu3_3{"relu3_3"};
     std::vector<int32_t> relu3_3_top_shape;
