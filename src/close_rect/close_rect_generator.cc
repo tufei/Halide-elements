@@ -21,18 +21,42 @@ public:
   GeneratorOutput<Buffer<T>> erode_rected{"erode_rected", 3};
 
   void generate() {
-    Func dilate_rected{"dilate_rected"};
+      if (this->auto_schedule) {
+        // Run dilate
+        dilate_rected =
+            dilate_rect_pure<T>(input, width, height, depth,
+                                window_width, window_height, iteration);
 
-    // Run dilate
-    dilate_rected = dilate_rect<T>(input, width, height, depth, window_width, window_height, iteration);
+        // Run erode
+        erode_rected =
+            erode_rect_pure<T>(dilate_rected, width, height, depth,
+                               window_width, window_height, iteration);
+      } else {
+        // Run dilate
+        dilate_rected =
+            dilate_rect<T>(input, width, height, depth,
+                           window_width, window_height, iteration);
 
-    // Run erode
-    erode_rected = erode_rect<T>(dilate_rected, width, height, depth, window_width, window_height, iteration);
-
-    schedule(input, {width, height, depth});
-    schedule(dilate_rected, {width, height, depth});
-    schedule(erode_rected, {width, height, depth});
+        // Run erode
+        erode_rected =
+            erode_rect<T>(dilate_rected, width, height, depth,
+                          window_width, window_height, iteration);
+      }
   }
+
+  void schedule() {
+      if (this->auto_schedule) {
+          input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+          erode_rected.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+      } else {
+        ::schedule(input, {width, height, depth});
+        ::schedule(dilate_rected, {width, height, depth});
+        ::schedule(erode_rected, {width, height, depth});
+      }
+  }
+
+private:
+    Func dilate_rected{"dilate_rected"};
 };
 
 HALIDE_REGISTER_GENERATOR(CloseRect<uint8_t>, close_rect_u8);

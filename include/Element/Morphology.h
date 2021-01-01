@@ -115,10 +115,13 @@ Func dilate_pure(GeneratorInput<Buffer<T>> &src,
 }
 
 template<typename T>
-Func dilate_rect(Func src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, int32_t iteration)
+Func dilate_rect(Func src, int32_t width, int32_t height, int32_t depth,
+                 int32_t window_width, int32_t window_height,
+                 int32_t iteration)
 {
     Var x{"x"}, y{"y"}, c{"c"};
-    RDom r{-(window_width / 2), window_width, -(window_height / 2), window_height};
+    RDom r{-(window_width / 2), window_width,
+           -(window_height / 2), window_height};
 
     Func dst = src;
 
@@ -126,7 +129,11 @@ Func dilate_rect(Func src, int32_t width, int32_t height, int32_t depth, int32_t
         if (i != 0) {
             schedule(dst, {width, height, depth});
         }
-        Func clamped = BoundaryConditions::repeat_edge(dst, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}, {0, cast<int32_t>(depth)}});
+        Func clamped =
+            BoundaryConditions::repeat_edge(dst,
+                                            {{0, cast<int32_t>(width)},
+                                             {0, cast<int32_t>(height)},
+                                             {0, cast<int32_t>(depth)}});
 
         Func workbuf{"workbuf" + std::to_string(i)};
         workbuf(x, y, c) = maximum_unroll(r, clamped(x + r.x, y + r.y, c));
@@ -138,10 +145,52 @@ Func dilate_rect(Func src, int32_t width, int32_t height, int32_t depth, int32_t
 }
 
 template<typename T>
-Func dilate_rect(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, int32_t iteration)
+Func dilate_rect(GeneratorInput<Buffer<T>> &src,
+                 int32_t width, int32_t height, int32_t depth,
+                 int32_t window_width, int32_t window_height,
+                 int32_t iteration)
 {
     Func s = src;
-    return dilate_rect<T>(s, width, height, depth, window_width, window_height, iteration);
+    return dilate_rect<T>(s, width, height, depth,
+                          window_width, window_height, iteration);
+}
+
+template<typename T>
+Func dilate_rect_pure(Func src, int32_t width, int32_t height, int32_t depth,
+                      int32_t window_width, int32_t window_height,
+                      int32_t iteration)
+{
+    Var x{"x"}, y{"y"}, c{"c"};
+    RDom r{-(window_width / 2), window_width,
+           -(window_height / 2), window_height};
+
+    Func dst = src;
+
+    for (int32_t i = 0; i < iteration; i++) {
+        Func clamped =
+            BoundaryConditions::repeat_edge(dst,
+                                            {{0, cast<int32_t>(width)},
+                                             {0, cast<int32_t>(height)},
+                                             {0, cast<int32_t>(depth)}});
+
+        Func workbuf{"workbuf" + std::to_string(i)};
+        workbuf(x, y, c) = maximum_unroll(r, clamped(x + r.x, y + r.y, c));
+
+        dst = workbuf;
+    }
+
+    return dst;
+}
+
+template<typename T>
+Func dilate_rect_pure(GeneratorInput<Buffer<T>> &src,
+                      int32_t width, int32_t height, int32_t depth,
+                      int32_t window_width, int32_t window_height,
+                      int32_t iteration)
+{
+    Func s = src;
+    return dilate_rect_pure<T>(s, width, height, depth,
+                               window_width, window_height, iteration);
 }
 
 template<typename T>
@@ -486,10 +535,13 @@ Func erode_cross_pure(GeneratorInput<Buffer<T>> &src,
 }
 
 template<typename T>
-Func erode_rect(Func src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, int32_t iteration)
+Func erode_rect(Func src, int32_t width, int32_t height, int32_t depth,
+                int32_t window_width, int32_t window_height,
+                int32_t iteration)
 {
     Var x{"x"}, y{"y"}, c{"c"};
-    RDom r{-(window_width / 2), window_width, -(window_height / 2), window_height};
+    RDom r{-(window_width / 2), window_width,
+           -(window_height / 2), window_height};
 
     Func dst = src;
 
@@ -497,7 +549,11 @@ Func erode_rect(Func src, int32_t width, int32_t height, int32_t depth, int32_t 
         if (i != 0) {
             schedule(dst, {width, height, depth});
         }
-        Func clamped = BoundaryConditions::repeat_edge(dst, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}, {0, cast<int32_t>(depth)}});
+        Func clamped =
+            BoundaryConditions::repeat_edge(dst,
+                                            {{0, cast<int32_t>(width)},
+                                             {0, cast<int32_t>(height)},
+                                             {0, cast<int32_t>(depth)}});
 
         Func workbuf{"workbuf" + std::to_string(i)};
         workbuf(x, y, c) = minimum_unroll(r, clamped(x + r.x, y + r.y, c));
@@ -509,10 +565,52 @@ Func erode_rect(Func src, int32_t width, int32_t height, int32_t depth, int32_t 
 }
 
 template<typename T>
-Func erode_rect(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height, int32_t iteration)
+Func erode_rect(GeneratorInput<Buffer<T>> &src,
+                int32_t width, int32_t height, int32_t depth,
+                int32_t window_width, int32_t window_height,
+                int32_t iteration)
 {
     Func s = src;
-    return erode_rect<T>(s, width, height, depth, window_width, window_height, iteration);
+    return erode_rect<T>(s, width, height, depth,
+                         window_width, window_height, iteration);
+}
+
+template<typename T>
+Func erode_rect_pure(Func src, int32_t width, int32_t height, int32_t depth,
+                     int32_t window_width, int32_t window_height,
+                     int32_t iteration)
+{
+    Var x{"x"}, y{"y"}, c{"c"};
+    RDom r{-(window_width / 2), window_width,
+           -(window_height / 2), window_height};
+
+    Func dst = src;
+
+    for (int32_t i = 0; i < iteration; i++) {
+        Func clamped =
+            BoundaryConditions::repeat_edge(dst,
+                                            {{0, cast<int32_t>(width)},
+                                             {0, cast<int32_t>(height)},
+                                             {0, cast<int32_t>(depth)}});
+
+        Func workbuf{"workbuf" + std::to_string(i)};
+        workbuf(x, y, c) = minimum_unroll(r, clamped(x + r.x, y + r.y, c));
+
+        dst = workbuf;
+    }
+
+    return dst;
+}
+
+template<typename T>
+Func erode_rect_pure(GeneratorInput<Buffer<T>> &src,
+                     int32_t width, int32_t height, int32_t depth,
+                     int32_t window_width, int32_t window_height,
+                     int32_t iteration)
+{
+    Func s = src;
+    return erode_rect_pure<T>(s, width, height, depth,
+                              window_width, window_height, iteration);
 }
 
 } // anonymous
