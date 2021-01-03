@@ -2,14 +2,13 @@
 #include <iostream>
 #include <exception>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "convolution_arbitrary_bits.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 #define BORDER_INTERPOLATE(x, l) (x < 0 ? 0 : (x >= l ? l - 1 : x))
 
@@ -37,7 +36,9 @@ int main(int argc, char **argv) {
 
         Buffer<uint8_t> output(width, height, depth);
 
-        convolution_arbitrary_bits(input, kernel, 3, output);
+        const auto &result = benchmark([&]() {
+            convolution_arbitrary_bits(input, kernel, 3, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
