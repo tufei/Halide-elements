@@ -21,10 +21,25 @@ public:
     GeneratorOutput<Buffer<T>> output{"output", 3};
 
     void generate() {
-        output = dilate_cross<T>(input, width, height, depth, window_width, window_height, iteration);
+        if (this->auto_schedule) {
+            output = dilate_cross_pure<T>(input, width, height, depth,
+                                          window_width, window_height,
+                                          iteration);
+        } else {
+            output = dilate_cross<T>(input, width, height, depth,
+                                     window_width, window_height,
+                                     iteration);
+        }
+    }
 
-        schedule(input, {width, height, depth});
-        schedule(output, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            output.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(input, {width, height, depth});
+            ::schedule(output, {width, height, depth});
+        }
     }
 };
 

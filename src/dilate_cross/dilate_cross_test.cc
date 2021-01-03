@@ -4,13 +4,13 @@
 #include <exception>
 #include <climits>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "dilate_cross_u8.h"
 #include "dilate_cross_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t *_workbuf__1_buffer))
@@ -69,7 +69,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
             }
         }
         expect = &(workbuf[k%2]);
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
