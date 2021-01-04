@@ -21,15 +21,9 @@ public:
     GeneratorOutput<Buffer<T>> output{"output", 3};
 
     void generate() {
-        if (this->auto_schedule) {
-            output = dilate_rect_pure<T>(input, width, height, depth,
-                                         window_width, window_height,
-                                         iteration);
-        } else {
-            output = dilate_rect<T>(input, width, height, depth,
-                                    window_width, window_height,
-                                    iteration);
-        }
+        output = dilate_rect<T>(input, width, height, depth,
+                                window_width, window_height,
+                                iteration, this->auto_schedule);
     }
 
     void schedule() {

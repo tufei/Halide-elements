@@ -20,15 +20,10 @@ public:
     GeneratorOutput<Buffer<uint8_t>> out{"out", 3};
 
     void generate() {
-        if (auto_schedule) {
-            out = convolution_pure<uint8_t, int16_t, 16, 10>(in, width, height, depth,
-                                                             kernel, kernel_size,
-                                                             unroll_factor);
-        } else {
-            out = convolution<uint8_t, int16_t, 16, 10>(in, width, height, depth,
-                                                        kernel, kernel_size,
-                                                        unroll_factor);
-        }
+        out = convolution<uint8_t, int16_t, 16, 10>(in, width, height, depth,
+                                                    kernel, kernel_size,
+                                                    unroll_factor,
+                                                    auto_schedule);
     }
 
     void schedule() {

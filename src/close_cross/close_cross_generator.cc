@@ -21,27 +21,17 @@ public:
   GeneratorOutput<Buffer<T>> erode_crossed{"erode_crossed", 3};
 
   void generate() {
-      if (this->auto_schedule) {
-        // Run dilate
-        dilate_crossed =
-            dilate_cross_pure<T>(input, width, height, depth,
-                                 window_width, window_height, iteration);
+    // Run dilate
+    dilate_crossed =
+        dilate_cross<T>(input, width, height, depth,
+                        window_width, window_height,
+                        iteration, this->auto_schedule);
 
-        // Run erode
-        erode_crossed =
-            erode_cross_pure<T>(dilate_crossed, width, height, depth,
-                                window_width, window_height, iteration);
-      } else {
-        // Run dilate
-        dilate_crossed =
-            dilate_cross<T>(input, width, height, depth,
-                            window_width, window_height, iteration);
-
-        // Run erode
-        erode_crossed =
-            erode_cross<T>(dilate_crossed, width, height, depth,
-                           window_width, window_height, iteration);
-      }
+    // Run erode
+    erode_crossed =
+        erode_cross<T>(dilate_crossed, width, height, depth,
+                       window_width, window_height,
+                       iteration, this->auto_schedule);
   }
 
   void schedule() {

@@ -976,7 +976,8 @@ Func bin_fc_fixed32(Func bottom, T weight, T alpha, T bias, const std::vector<in
 
 // Softmax
 Func softmax(Func bottom, const std::vector<int32_t>& bottom_shape,
-             std::vector<int32_t>& top_shape, bool unrolled = false)
+             std::vector<int32_t>& top_shape, bool unrolled = false,
+             const bool auto_schedule = false)
 {
     Var c("c"), x("x"), y("y"), n("n");
     Func f, mins("mins"), norm("norm"), d("d");
@@ -985,24 +986,26 @@ Func softmax(Func bottom, const std::vector<int32_t>& bottom_shape,
 
     if (dim == 2) {
         mins(n) = minimum_unroll(r, bottom(r.x, n));
-        schedule(mins, {bottom_shape[1]});
+        if (!auto_schedule) schedule(mins, {bottom_shape[1]});
 
         norm(c, n) = exp(bottom(c, n) - mins(n));
-        schedule(norm, to_expr(bottom_shape));
+        if (!auto_schedule) schedule(norm, to_expr(bottom_shape));
 
         d(n) = sum_unroll(r, norm(r.x, n));
-        schedule(d, {bottom_shape[1]});
+        if (!auto_schedule) schedule(d, {bottom_shape[1]});
 
         f(c, n) = norm(c, n) / d(n);
     } else if (dim == 4) {
         mins(x, y, n) = minimum(r, bottom(r.x, x, y, n));
-        schedule(mins, {bottom_shape[1], bottom_shape[2], bottom_shape[3]});
+        if (!auto_schedule)
+            schedule(mins, {bottom_shape[1], bottom_shape[2], bottom_shape[3]});
 
         norm(c, x, y, n) = exp(bottom(c, x, y, n) - mins(x, y, n));
-        schedule(norm, to_expr(bottom_shape));
+        if (!auto_schedule) schedule(norm, to_expr(bottom_shape));
 
         d(x, y, n) = sum(r, norm(r.x, x, y, n));
-        schedule(d, {bottom_shape[1], bottom_shape[2], bottom_shape[3]});
+        if (!auto_schedule)
+            schedule(d, {bottom_shape[1], bottom_shape[2], bottom_shape[3]});
 
         f(c, x, y, n) = norm(c, x, y, n) / d(x, y, n);
     } else {
@@ -1011,44 +1014,10 @@ Func softmax(Func bottom, const std::vector<int32_t>& bottom_shape,
 
     top_shape = bottom_shape;
 
-    if (unrolled) {
+    if (unrolled && !auto_schedule) {
         norm.unroll(c);
         f.unroll(c);
     }
-
-    return f;
-}
-
-// Softmax
-Func softmax_pure(Func bottom, const std::vector<int32_t>& bottom_shape,
-                  std::vector<int32_t>& top_shape)
-{
-    Var c("c"), x("x"), y("y"), n("n");
-    Func f, mins("mins"), norm("norm"), d("d");
-    RDom r(0, bottom_shape[0]);
-    int dim = bottom.dimensions();
-
-    if (dim == 2) {
-        mins(n) = minimum_unroll(r, bottom(r.x, n));
-
-        norm(c, n) = exp(bottom(c, n) - mins(n));
-
-        d(n) = sum_unroll(r, norm(r.x, n));
-
-        f(c, n) = norm(c, n) / d(n);
-    } else if (dim == 4) {
-        mins(x, y, n) = minimum(r, bottom(r.x, x, y, n));
-
-        norm(c, x, y, n) = exp(bottom(c, x, y, n) - mins(x, y, n));
-
-        d(x, y, n) = sum(r, norm(r.x, x, y, n));
-
-        f(c, x, y, n) = norm(c, x, y, n) / d(x, y, n);
-    } else {
-        throw_assert(true, "unhandled dimensions");
-    }
-
-    top_shape = bottom_shape;
 
     return f;
 }
@@ -1138,7 +1107,8 @@ Func binconv_module_fixed32(Func bottom,
                             T conv_weight, T conv_alpha, T conv_bias,
                             const std::vector<int32_t> conv_weight_shape,
                             std::vector<int32_t>& top_shape,
-                            bool unroll = false)
+                            bool unroll = false,
+                            const bool auto_schedule = false)
 {
     Var x("x"), y("y"), c("c"), n("n");
 
@@ -1155,7 +1125,7 @@ Func binconv_module_fixed32(Func bottom,
     scale_f(c, x, y, n) =
         scale_fixed32<T, FB>(bn_f, bn_weight, bn_bias,
                              bn_top_shape, scale_top_shape)(c, x, y, n);
-    schedule(scale_f, to_expr(scale_top_shape));
+    if (!auto_schedule) schedule(scale_f, to_expr(scale_top_shape));
 
     // BinActive
     Func active_f("active" + suffix);
@@ -1163,7 +1133,7 @@ Func binconv_module_fixed32(Func bottom,
     active_f(c, x, y, n) =
         bin_active_fixed32<FB>(scale_f, scale_top_shape,
                                active_top_shape)(c, x, y, n);
-    schedule(active_f, to_expr(active_top_shape));
+    if (!auto_schedule) schedule(active_f, to_expr(active_top_shape));
 
     // Conv
     Func conv_f("conv" + suffix);
@@ -1172,56 +1142,7 @@ Func binconv_module_fixed32(Func bottom,
         bin_conv_fixed32<T, FB>(active_f, conv_weight, conv_alpha, conv_bias,
                                 conv_weight_shape, active_top_shape,
                                 conv_top_shape, unroll)(c, x, y, n);
-    schedule(conv_f, to_expr(conv_top_shape));
-
-    // ReLU:
-    Func relu_f("relu" + suffix);
-    std::vector<int32_t> relu_top_shape;
-    relu_f(c, x, y, n) = relu(conv_f, conv_top_shape, top_shape)(c, x, y, n);
-
-    return relu_f;
-}
-
-template <typename T, uint32_t FB>
-Func binconv_module_fixed32_pure(Func bottom,
-                                 const std::vector<int32_t>& bottom_shape,
-                                 const std::string& suffix,
-                                 T bn_mean, T bn_variance, T bn_weight, T bn_bias,
-                                 T conv_weight, T conv_alpha, T conv_bias,
-                                 const std::vector<int32_t> conv_weight_shape,
-                                 std::vector<int32_t>& top_shape,
-                                 bool unroll = false)
-{
-    Var x("x"), y("y"), c("c"), n("n");
-
-    // Bn
-    Func bn_f("bn" + suffix);
-    std::vector<int32_t> bn_top_shape;
-    bn_f(c, x, y, n) =
-        bn_fixed32<T, FB>(bottom, bn_mean, bn_variance,
-                          bottom_shape, bn_top_shape)(c, x, y, n);
-
-    // Scale
-    Func scale_f("scale" + suffix);
-    std::vector<int32_t> scale_top_shape;
-    scale_f(c, x, y, n) =
-        scale_fixed32<T, FB>(bn_f, bn_weight, bn_bias,
-                             bn_top_shape, scale_top_shape)(c, x, y, n);
-
-    // BinActive
-    Func active_f("active" + suffix);
-    std::vector<int32_t> active_top_shape;
-    active_f(c, x, y, n) =
-        bin_active_fixed32<FB>(scale_f, scale_top_shape,
-                               active_top_shape)(c, x, y, n);
-
-    // Conv
-    Func conv_f("conv" + suffix);
-    std::vector<int32_t> conv_top_shape;
-    conv_f(c, x, y, n) =
-        bin_conv_fixed32<T, FB>(active_f, conv_weight, conv_alpha, conv_bias,
-                                conv_weight_shape, active_top_shape,
-                                conv_top_shape, unroll)(c, x, y, n);
+    if (!auto_schedule) schedule(conv_f, to_expr(conv_top_shape));
 
     // ReLU:
     Func relu_f("relu" + suffix);

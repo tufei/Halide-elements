@@ -18,11 +18,7 @@ public:
     GeneratorOutput<Buffer<D>> dst{"dst", 2};
 
     void generate() {
-        if (this->auto_schedule) {
-            dst = average_value_pure<S, D>(src, roi, width, height);
-        } else {
-            dst = average_value<S, D>(src, roi, width, height);
-        }
+        dst = average_value<S, D>(src, roi, width, height, this->auto_schedule);
     }
 
     void schedule() {

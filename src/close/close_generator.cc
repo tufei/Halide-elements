@@ -22,21 +22,12 @@ public:
     GeneratorOutput<Buffer<T>> eroded{"eroded", 3};
 
     void generate() {
-        if (this->auto_schedule) {
-            dilated = dilate_pure<T>(input, width, height, depth,
-                                     window_width, window_height,
-                                     structure, iteration);
-            eroded = erode_pure<T>(dilated, width, height, depth,
-                                   window_width, window_height,
-                                   structure, iteration);
-        } else {
-            dilated = dilate<T>(input, width, height, depth,
-                                window_width, window_height,
-                                structure, iteration);
-            eroded = erode<T>(dilated, width, height, depth,
-                              window_width, window_height,
-                              structure, iteration);
-        }
+        dilated = dilate<T>(input, width, height, depth,
+                            window_width, window_height,
+                            structure, iteration, this->auto_schedule);
+        eroded = erode<T>(dilated, width, height, depth,
+                          window_width, window_height,
+                          structure, iteration, this->auto_schedule);
     }
 
     void schedule() {

@@ -21,13 +21,9 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        if (this->auto_schedule) {
-            dst = bilateral_pure<T>(src, width, height, depth,
-                                    window_size, sigma_color, sigma_space);
-        } else {
-            dst = bilateral<T>(src, width, height, depth,
-                               window_size, sigma_color, sigma_space);
-        }
+        dst = bilateral<T>(src, width, height, depth,
+                           window_size, sigma_color, sigma_space,
+                           this->auto_schedule);
     }
 
     void schedule() {

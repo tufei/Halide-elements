@@ -352,11 +352,8 @@ public:
 
         // Softmax
         //Func prob("prob");
-        if (auto_schedule) {
-            prob(i, n) = softmax_pure(tof, tof_top_shape, prob_top_shape)(i, n);
-        } else {
-            prob(i, n) = softmax(tof, tof_top_shape, prob_top_shape)(i, n);
-        }
+        prob(i, n) =
+            softmax(tof, tof_top_shape, prob_top_shape, false, auto_schedule)(i, n);
     }
 
     void schedule() {

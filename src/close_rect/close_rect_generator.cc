@@ -21,27 +21,17 @@ public:
   GeneratorOutput<Buffer<T>> erode_rected{"erode_rected", 3};
 
   void generate() {
-      if (this->auto_schedule) {
-        // Run dilate
-        dilate_rected =
-            dilate_rect_pure<T>(input, width, height, depth,
-                                window_width, window_height, iteration);
+    // Run dilate
+    dilate_rected =
+        dilate_rect<T>(input, width, height, depth,
+                       window_width, window_height,
+                       iteration, this->auto_schedule);
 
-        // Run erode
-        erode_rected =
-            erode_rect_pure<T>(dilate_rected, width, height, depth,
-                               window_width, window_height, iteration);
-      } else {
-        // Run dilate
-        dilate_rected =
-            dilate_rect<T>(input, width, height, depth,
-                           window_width, window_height, iteration);
-
-        // Run erode
-        erode_rected =
-            erode_rect<T>(dilate_rected, width, height, depth,
-                          window_width, window_height, iteration);
-      }
+    // Run erode
+    erode_rected =
+        erode_rect<T>(dilate_rected, width, height, depth,
+                      window_width, window_height,
+                      iteration, this->auto_schedule);
   }
 
   void schedule() {

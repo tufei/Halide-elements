@@ -139,7 +139,8 @@ template<typename TI, typename TK, uint32_t NB, uint32_t FB>
 Func convolution(GeneratorInput<Buffer<TI>> &in,
                  int32_t width, int32_t height, int32_t depth,
                  GeneratorInput<Buffer<TK>> &kernel,
-                 Expr kernel_size, int32_t unroll_factor)
+                 Expr kernel_size, int32_t unroll_factor,
+                 const bool auto_schedule = false)
 {
     Var x{"x"}, y{"y"}, c{"c"};
 
@@ -170,46 +171,10 @@ Func convolution(GeneratorInput<Buffer<TI>> &in,
     Func out("out");
     out(x, y, c) = from_fixed<uint8_t>(sum_unroll(r, pv * kv));
 
-    schedule(kernel, {5, 5});
-    schedule(k, {5, 5});
-
-    return out;
-}
-
-template<typename TI, typename TK, uint32_t NB, uint32_t FB>
-Func convolution_pure(GeneratorInput<Buffer<TI>> &in,
-                      int32_t width, int32_t height, int32_t depth,
-                      GeneratorInput<Buffer<TK>> &kernel,
-                      Expr kernel_size, int32_t unroll_factor)
-{
-    Var x{"x"}, y{"y"}, c{"c"};
-
-    Func bounded =
-        BoundaryConditions::repeat_edge(in,
-                                        {{0, width},
-                                         {0, height},
-                                         {0, depth}});
-
-#if 0
-    Expr kh = Halide::div_round_to_zero(kernel_size, 2);
-    RDom r(0, kernel_size, 0, kernel_size);
-#else
-    Expr kh = cast<int>(kernel_size/2);
-    RDom r{0, kernel_size, 0, kernel_size};
-#endif
-
-    Expr dx = r.x - kh;
-    Expr dy = r.y - kh;
-
-    Func k;
-    k(x, y) = kernel(x, y);
-
-    using FixedNB = FixedN<NB, FB>;
-    FixedNB pv = to_fixed<NB, FB>(bounded(x+dx, y+dy, c));
-    FixedNB kv{k(r.x, r.y)};
-
-    Func out("out");
-    out(x, y, c) = from_fixed<uint8_t>(sum_unroll(r, pv * kv));
+    if (!auto_schedule) {
+        schedule(kernel, {5, 5});
+        schedule(k, {5, 5});
+    }
 
     return out;
 }
@@ -667,21 +632,22 @@ Func split4(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height)
 template<typename T>
 Func sad(GeneratorInput<Buffer<T>> &input0, GeneratorInput<Buffer<T>> &input1, int32_t width, int32_t height, int32_t depth)
 {
-	Var x{"x"}, y{"y"}, c{"c"};
-	Expr srcval0 = cast<int64_t>(input0(x, y, c));
-	Expr srcval1 = cast<int64_t>(input1(x, y, c));
-	Expr diffval = srcval0 - srcval1;
+    Var x{"x"}, y{"y"}, c{"c"};
+    Expr srcval0 = cast<int64_t>(input0(x, y, c));
+    Expr srcval1 = cast<int64_t>(input1(x, y, c));
+    Expr diffval = srcval0 - srcval1;
 
-	Func output{"output"};
-	output(x,y,c) = select(diffval<0, cast<T>(-diffval), cast<T>(diffval));
+    Func output{"output"};
+    output(x,y,c) = select(diffval<0, cast<T>(-diffval), cast<T>(diffval));
 
-	return output;
+    return output;
 }
 
 template<typename T>
 Func bilateral(GeneratorInput<Buffer<T>> &src,
                int32_t width, int32_t height, int32_t depth,
-               Expr wSize, Expr color, Expr space)
+               Expr wSize, Expr color, Expr space,
+               const bool auto_schedule = false)
 {
     return Func();
 }
@@ -690,7 +656,8 @@ Func bilateral(GeneratorInput<Buffer<T>> &src,
 template<>
 Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src,
                         int32_t width, int32_t height, int32_t depth,
-                        Expr wSize, Expr color, Expr space)
+                        Expr wSize, Expr color, Expr space,
+                        const bool auto_schedule)
 {
     Func dst{"dst"};
     Var x{"x"}, y{"y"}, c{"c"};
@@ -699,7 +666,7 @@ Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src,
     Var i{"i"};
     kernel_r(i) = exp(cast<double>(-0.5f) * cast<double>(i) *
                       cast<double>(i) / (color * color));
-    schedule(kernel_r, {256});
+    if (!auto_schedule) schedule(kernel_r, {256});
 
     Expr wRadius = cast<int>(wSize/2);
     RDom w{0, wSize, 0, wSize, "w"};
@@ -711,7 +678,7 @@ Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src,
     kernel_d(x, y) = select(r > wRadius, 0,
                             exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) /
                                 (space * space)));
-    schedule(kernel_d, {5, 5});
+    if (!auto_schedule) schedule(kernel_d, {5, 5});
 
     Func clamped = BoundaryConditions::repeat_edge(src,
                                                    {{0, width},
@@ -739,7 +706,7 @@ Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src,
                cast<uint8_t>(num(x, y, c) + 0.5f),
                cast<uint8_t>(num(x, y, c)));
 
-    schedule(num, {width, height, depth});
+    if (!auto_schedule) schedule(num, {width, height, depth});
 
     return dst;
 }
@@ -747,7 +714,8 @@ Func bilateral<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src,
 template<>
 Func bilateral<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src,
                          int32_t width, int32_t height, int32_t depth,
-                         Expr wSize, Expr color, Expr space)
+                         Expr wSize, Expr color, Expr space,
+                         const bool auto_schedule)
 {
     Func dst{"dst"};
     Var x{"x"}, y{"y"}, c{"c"};
@@ -762,7 +730,7 @@ Func bilateral<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src,
     kernel_d(x, y) = select(r > wRadius, 0,
                             exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) /
                                 (space * space)));
-    schedule(kernel_d, {5, 5});
+    if (!auto_schedule) schedule(kernel_d, {5, 5});
 
     Func clamped = BoundaryConditions::repeat_edge(src,
                                                    {{0, width},
@@ -794,121 +762,7 @@ Func bilateral<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src,
                cast<uint16_t>(num(x, y, c) + 0.5f),
                cast<uint16_t>(num(x, y, c)));
 
-    schedule(num, {width, height, depth});
-
-    return dst;
-}
-
-template<typename T>
-Func bilateral_pure(GeneratorInput<Buffer<T>> &src,
-                    int32_t width, int32_t height, int32_t depth,
-                    Expr wSize, Expr color, Expr space)
-{
-    return Func();
-}
-//for uint8_t and for uint16_t
-
-template<>
-Func bilateral_pure<uint8_t>(GeneratorInput<Buffer<uint8_t>> &src,
-                             int32_t width, int32_t height, int32_t depth,
-                             Expr wSize, Expr color, Expr space)
-{
-    Func dst{"dst"};
-    Var x{"x"}, y{"y"}, c{"c"};
-
-    Func kernel_r{"kernel_r"};
-    Var i{"i"};
-    kernel_r(i) = exp(cast<double>(-0.5f) * cast<double>(i) *
-                      cast<double>(i) / (color * color));
-
-    Expr wRadius = cast<int>(wSize/2);
-    RDom w{0, wSize, 0, wSize, "w"};
-
-    Expr diff_x = cast<double>(x-wRadius);
-    Expr diff_y = cast<double>(y-wRadius);
-    Expr r = sqrt(diff_y*diff_y + diff_x*diff_x);
-    Func kernel_d;
-    kernel_d(x, y) = select(r > wRadius, 0,
-                            exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) /
-                                (space * space)));
-
-    Func clamped = BoundaryConditions::repeat_edge(src,
-                                                   {{0, width},
-                                                    {0, height},
-                                                    {0, depth}});
-    Func bri;
-    bri(x, y, c) = clamped(x-wRadius, y-wRadius, c);
-
-    Func num;
-    num(x, y, c) =
-        sum_unroll(w, kernel_d(w.x, w.y) *
-                   select(src(x, y, c) > bri(x+w.x, y+w.y, c),
-                          kernel_r(src(x, y, c)-bri(x+w.x, y+w.y, c)),
-                          kernel_r(bri(x+w.x, y+w.y, c)-src(x, y, c))) *
-                   bri(w.x+x, w.y+y, c)) /
-        sum_unroll(w, kernel_d(w.x, w.y) *
-                   select(src(x, y, c) > bri(x+w.x, y+w.y, c),
-                          kernel_r(src(x, y, c)-bri(x+w.x, y+w.y, c)),
-                          kernel_r(bri(x+w.x, y+w.y, c)-src(x, y, c))));
-
-    dst(x, y, c) =
-        select(cast<float>(num(x, y, c) - floor(num(x, y, c)) - 0.5f) >
-               (std::numeric_limits<float>::epsilon)() ||
-               (cast<uint8_t>(num(x, y, c))) % 2 == 1,
-               cast<uint8_t>(num(x, y, c) + 0.5f),
-               cast<uint8_t>(num(x, y, c)));
-
-    return dst;
-}
-
-template<>
-Func bilateral_pure<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src,
-                              int32_t width, int32_t height, int32_t depth,
-                              Expr wSize, Expr color, Expr space)
-{
-    Func dst{"dst"};
-    Var x{"x"}, y{"y"}, c{"c"};
-
-    Expr wRadius = cast<int>(wSize/2);
-    RDom w{0, wSize, 0, wSize, "w"};
-
-    Expr diff_x = cast<double>(x-wRadius);
-    Expr diff_y = cast<double>(y-wRadius);
-    Expr r = sqrt(diff_y * diff_y + diff_x * diff_x);
-    Func kernel_d;
-    kernel_d(x, y) = select(r > wRadius, 0,
-                            exp(-0.5f * (diff_x * diff_x + diff_y * diff_y) /
-                                (space * space)));
-
-    Func clamped = BoundaryConditions::repeat_edge(src,
-                                                   {{0, width},
-                                                    {0, height},
-                                                    {0, depth}});
-    Func bri;
-    bri(x, y, c) = clamped(x - wRadius, y - wRadius, c);
-
-    Func num;
-    num(x, y, c) =
-        sum_unroll(w, kernel_d(w.x, w.y) *
-                   exp(-0.5f *
-                       (cast<double>(src(x, y, c)) -
-                        cast<double>(bri(x + w.x, y + w.y, c))) *
-                       (cast<double>(src(x, y, c)) -
-                        cast<double>(bri(x + w.x, y + w.y, c))) / (color * color)) *
-                   bri(w.x + x, w.y + y, c)) /
-        sum_unroll(w, kernel_d(w.x, w.y) *
-                   exp(-0.5f *
-                       (cast<double>(src(x, y, c)) -
-                        cast<double>(bri(x + w.x, y + w.y, c))) *
-                       (cast<double>(src(x, y, c)) -
-                        cast<double>(bri(x + w.x, y + w.y, c))) / (color * color)));
-
-    dst(x, y, c) =
-        select(cast<float>(num(x, y, c) - floor(num(x, y, c)) - 0.5f) >
-               (std::numeric_limits<float>::epsilon)() ||
-               (cast<uint16_t>(num(x, y, c))) % 2 == 1,
-               cast<uint16_t>(num(x, y, c) + 0.5f),
-               cast<uint16_t>(num(x, y, c)));
+    if (!auto_schedule) schedule(num, {width, height, depth});
 
     return dst;
 }

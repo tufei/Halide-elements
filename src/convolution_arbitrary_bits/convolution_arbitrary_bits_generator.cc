@@ -30,7 +30,8 @@ public:
     void generate() {
         out = convolution<uint8_t, int32_t, NB, FB>(in, width, height, depth,
                                                     kernel, kernel_size,
-                                                    unroll_factor);
+                                                    unroll_factor,
+                                                    auto_schedule);
     }
 
     void schedule() {
