@@ -4,14 +4,14 @@
 #include <exception>
 #include <climits>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "equal_u8.h"
 #include "equal_u16.h"
 #include "equal_u32.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_t *_src1_buffer, struct halide_buffer_t *_dst_buffer))
@@ -30,7 +30,9 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_
         auto input1 = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input0, input1, output);
+        const auto &result = benchmark([&]() {
+            func(input0, input1, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
