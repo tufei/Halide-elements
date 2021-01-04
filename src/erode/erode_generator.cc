@@ -22,11 +22,21 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = erode<T>(src, width, height, depth, window_width, window_height, structure, iteration);
+        dst = erode<T>(src, width, height, depth,
+                       window_width, window_height,
+                       structure, iteration, this->auto_schedule);
+    }
 
-        schedule(src, {width, height, depth});
-        schedule(structure, {window_width, window_height});
-        schedule(dst, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            structure.set_estimates({{0, 3}, {0, 3}});
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(structure, {window_width, window_height});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 
