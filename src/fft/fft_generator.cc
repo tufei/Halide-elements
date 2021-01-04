@@ -14,16 +14,26 @@ public:
     GeneratorOutput<Buffer<float>> dst{"dst", 3};
 
     void generate() {
-        Var c{"cc"}, i{"ii"}, k{"kk"};
-
-        const int32_t n = static_cast<uint32_t>(n_);
-        const int32_t batch_size = static_cast<uint32_t>(batch_size_);
-
+        n = static_cast<uint32_t>(n_);
+        batch_size = static_cast<uint32_t>(batch_size_);
         dst(c, i, k) = fft(src, n, batch_size)(c, i, k);
-
-        schedule(src, {2, n, batch_size});
-        //schedule(dst, {2, n, batch_size}).unroll(c);
     }
+
+    void schedule() {
+        if (auto_schedule) {
+            src.set_estimates({{0, 2}, {0, 256}, {0, 4}});
+            dst.set_estimates({{0, 2}, {0, 256}, {0, 4}});
+        } else {
+            ::schedule(src, {2, n, batch_size});
+            //::schedule(dst, {2, n, batch_size}).unroll(c);
+        }
+    }
+
+private:
+    Var c{"cc"}, i{"ii"}, k{"kk"};
+
+    int32_t n;
+    int32_t batch_size;
 };
 
 HALIDE_REGISTER_GENERATOR(FFT, fft);

@@ -3,14 +3,13 @@
 #include <string>
 #include <vector>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "fft.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 struct float2 {
     float x;
@@ -56,8 +55,10 @@ int main(int argc, char **argv) {
         const int batch_size = 4;
         Buffer<float> input = mk_rand_real_buffer<float>({c, n, batch_size}, -1.0f, 1.0f);
         Buffer<float> output(c, n, batch_size);
-        
-        fft(input, output);
+
+        const auto &result = benchmark([&]() {
+            fft(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int i=0; i<batch_size; ++i) {
             std::vector<float2> src(n);
