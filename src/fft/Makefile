@@ -1,3 +1,3 @@
 PROG:=fft
-AUTO_SCHEDULE:=false
+AUTO_SCHEDULE:=true
 include ../../common.mk

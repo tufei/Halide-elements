@@ -16,7 +16,7 @@ public:
     void generate() {
         n = static_cast<uint32_t>(n_);
         batch_size = static_cast<uint32_t>(batch_size_);
-        dst(c, i, k) = fft(src, n, batch_size)(c, i, k);
+        dst(c, i, k) = fft(src, n, batch_size, auto_schedule)(c, i, k);
     }
 
     void schedule() {
