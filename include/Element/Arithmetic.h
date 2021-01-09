@@ -321,7 +321,9 @@ Func integral(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height, int3
 
 
 template<typename T>
-Func histogram(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth, int32_t hist_width)
+Func histogram(GeneratorInput<Buffer<T>> &src,
+               int32_t width, int32_t height, int32_t depth,
+               int32_t hist_width, const bool auto_schedule = false)
 {
     uint32_t hist_size = static_cast<uint32_t>(std::numeric_limits<T>::max()) + 1;
     int32_t bin_size = (hist_size + hist_width - 1) / hist_width;

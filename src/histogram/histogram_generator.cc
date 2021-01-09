@@ -14,15 +14,24 @@ public:
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
     GeneratorParam<int32_t> depth{"depth", 3};
-    GeneratorParam<int32_t> hist_width{"hist_width", std::numeric_limits<T>::max() + 1};
+    GeneratorParam<int32_t> hist_width{"hist_width",
+                                       std::numeric_limits<T>::max() + 1};
 
     GeneratorOutput<Buffer<uint32_t>> dst{"dst", 2};
 
     void generate() {
-        dst = histogram<T>(src, width, height, depth, hist_width);
+        dst = histogram<T>(src, width, height, depth, hist_width,
+                           this->auto_schedule);
+    }
 
-        schedule(src, {width, height, depth});
-        schedule(dst, {hist_width, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, std::numeric_limits<T>::max()}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(dst, {hist_width, depth});
+        }
     }
 };
 
