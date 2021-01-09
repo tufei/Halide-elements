@@ -341,7 +341,10 @@ Func histogram(GeneratorInput<Buffer<T>> &src,
 }
 
 template<typename T>
-Func histogram2d(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, int32_t width, int32_t height, int32_t hist_width)
+Func histogram2d(GeneratorInput<Buffer<T>> &src0,
+                 GeneratorInput<Buffer<T>> &src1,
+                 int32_t width, int32_t height, int32_t hist_width,
+                 const bool auto_schedule = false)
 {
     Var x{"x"}, y{"y"}, c{"c"};
     RDom r{0, width, 0, height};

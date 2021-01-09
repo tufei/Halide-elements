@@ -17,16 +17,26 @@ public:
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
     GeneratorParam<int32_t> depth{"depth", 3};
-    GeneratorParam<int32_t> hist_width{"hist_width", 256, 1, static_cast<int32_t>(sqrt(std::numeric_limits<int32_t>::max()))};
+    GeneratorParam<int32_t> hist_width{"hist_width", 256, 1,
+                                       static_cast<int32_t>(sqrt(std::numeric_limits<int32_t>::max()))};
 
     GeneratorOutput<Buffer<uint32_t>> dst{"dst", 3};
 
     void generate() {
-        dst = histogram2d<T>(src0, src1, width, height, hist_width);
+        dst = histogram2d<T>(src0, src1, width, height, hist_width,
+                             this->auto_schedule);
+    }
 
-        schedule(src0, {width, height, depth});
-        schedule(src1, {width, height, depth});
-        schedule(dst, {hist_width, hist_width, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            src1.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, 256}, {0, 256}, {0, 3}});
+        } else {
+            ::schedule(src0, {width, height, depth});
+            ::schedule(src1, {width, height, depth});
+            ::schedule(dst, {hist_width, hist_width, depth});
+        }
     }
 };
 
