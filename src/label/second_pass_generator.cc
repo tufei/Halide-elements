@@ -17,10 +17,19 @@ public:
     GeneratorOutput<Buffer<uint32_t>> dst{"dst", 2};
 
     void generate() {
-        dst = label_secondpass(src, buf, width, height, bufW);
+        dst = label_secondpass(src, buf, width, height, bufW, auto_schedule);
+    }
 
-        schedule(src, {width, height});
-        schedule(dst, {width, height});
+    void schedule() {
+        if (auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}});
+            buf.set_estimates({{0, 1024}, {0, 768}});
+            bufW.set_estimate(1);
+            dst.set_estimates({{0, 1024}, {0, 768}});
+        } else {
+            ::schedule(src, {width, height});
+            ::schedule(dst, {width, height});
+        }
     }
 };
 

@@ -1377,14 +1377,19 @@ Func subimage(GeneratorInput<Buffer<T>> &src, Expr originx, Expr originy)
 }
 
 template<typename T>
-Func label_firstpass(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height)
+Func label_firstpass(GeneratorInput<Buffer<T>> &src,
+                     int32_t width, int32_t height,
+                     const bool auto_schedule = false)
 {
     Func original{"original"};
-    Expr MAX = width*height+1;
+    Expr MAX = width * height + 1;
     Var x{"org_x"}, y{"org_y"};
-    original(x, y) = cast<int32_t>(select(src(x,y)==0, MAX, x+y*width+1));
+    original(x, y) = cast<int32_t>(select(src(x,y) == 0,
+                                   MAX, x + y * width + 1));
 
-    Func extend = BoundaryConditions::constant_exterior(original, MAX, 0, width, 0, height);
+    Func extend = BoundaryConditions::constant_exterior(original, MAX,
+                                                        {{0, width},
+                                                         {0, height}});
     Func copy{"copy"};
 
     Func findMin{"findMin"};
@@ -1392,55 +1397,68 @@ Func label_firstpass(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t heig
 
     RDom s{0, width, 0, height, "s"};
     findMin(s.x, s.y) = select(findMin(s.x, s.y) == MAX,
-                               findMin(s.x, s.y), min(findMin(s.x, s.y),
-                               min(min(findMin(s.x-1, s.y-1),
-                               findMin(s.x, s.y-1)), min(findMin(s.x+1, s.y-1),
-                               findMin(s.x-1, s.y)))));
-    findMin.compute_root();
+                               findMin(s.x, s.y),
+                               min(findMin(s.x, s.y),
+                                   min(min(findMin(s.x - 1, s.y - 1),
+                                           findMin(s.x, s.y - 1)),
+                                       min(findMin(s.x + 1, s.y - 1),
+                                           findMin(s.x-1, s.y)))));
+    if (!auto_schedule) findMin.compute_root();
 
     Func backward{"back"}, whereUp{"where"};
-    whereUp(x, y) = select(findMin(x, y) == MAX, MAX,
-                           min(min(findMin(x+1, y), findMin(x-1, y+1)),
-                           min(findMin(x, y+1), findMin(x+1, y+1))));
+    whereUp(x, y) = select(findMin(x, y) == MAX,
+                           MAX,
+                           min(min(findMin(x + 1, y), findMin(x - 1, y + 1)),
+                               min(findMin(x, y + 1), findMin(x + 1, y + 1))));
     whereUp(x, y) = select(whereUp(x, y) < findMin(x, y), whereUp(x, y), MAX);
-    whereUp.compute_root();
+    if (!auto_schedule) whereUp.compute_root();
 
     backward(x, y) = findMin(x, y);
     Expr indX{"indx"},indY{"indy"};
-    indX = (findMin(s.x, s.y)-1)%width;
-    indY = select((findMin(s.x, s.y)-1)/width < height, (findMin(s.x, s.y)-1)/width, height-1);
+    indX = (findMin(s.x, s.y) - 1) % width;
+    indY = select((findMin(s.x, s.y) - 1) / width < height,
+                  (findMin(s.x, s.y) - 1) / width, height - 1);
     Expr target = backward(clamp(indX, 0, width), clamp(indY, 0, height));
 
-    Expr tarX = (whereUp(s.x, s.y)-1)%width;
-    Expr tarY = select((whereUp(s.x, s.y)-1)/width < height, (whereUp(s.x, s.y)-1)/width, height-1);
+    Expr tarX = (whereUp(s.x, s.y) - 1) % width;
+    Expr tarY = select((whereUp(s.x, s.y) - 1) / width < height,
+                       (whereUp(s.x, s.y) - 1) / width, height - 1);
     Expr origin = backward(clamp(tarX, 0, width), clamp(tarY, 0, height));
 
     backward(clamp(indX, 0, width), clamp(indY, 0, height)) =
-        select(target > whereUp(s.x, s.y), min(whereUp(s.x, s.y), origin), target);
-    backward.compute_root();
+        select(target > whereUp(s.x, s.y),
+               min(whereUp(s.x, s.y), origin),
+               target);
+    if (!auto_schedule) backward.compute_root();
 
     Func final;
     final(x, y) = backward(x, y);
-    final(s.x, s.y) = select(final(s.x, s.y) == MAX, final(s.x, s.y),
-                                min(final(s.x, s.y),
-                                min(min(final(s.x-1, s.y-1),
-                                final(s.x, s.y-1)), min(final(s.x+1, s.y-1),
-                                final(s.x-1, s.y)))));
-    final.compute_root();
+    final(s.x, s.y) = select(final(s.x, s.y) == MAX,
+                             final(s.x, s.y),
+                             min(final(s.x, s.y),
+                                 min(min(final(s.x - 1, s.y - 1),
+                                         final(s.x, s.y - 1)),
+                                     min(final(s.x + 1, s.y - 1),
+                                         final(s.x - 1, s.y)))));
+    if (!auto_schedule) final.compute_root();
 
     Func firstPass{"firstPass"};
     copy(x, y) = cast<uint32_t>(select(final(x, y) == MAX, 0, final(x, y)));
-    firstPass(x, y) = Tuple(copy(x, y),
-                            cast<uint32_t>(select(copy(x, y) == 0, 0,
-                                                  copy(x, y) < copy(x-1, y-1) ||
-                                                  copy(x, y) < copy(x, y-1) ||
-                                                  copy(x, y) < copy(x+1, y-1) ||
-                                                  copy(x, y) < copy(x-1, y), 1, 0)));
+    firstPass(x, y) =
+        Tuple(copy(x, y),
+              cast<uint32_t>(select(copy(x, y) == 0, 0,
+                                    copy(x, y) < copy(x - 1, y - 1) ||
+                                    copy(x, y) < copy(x, y - 1) ||
+                                    copy(x, y) < copy(x + 1, y - 1) ||
+                                    copy(x, y) < copy(x - 1, y), 1, 0)));
     //firstPass.print_loop_nest();
     return firstPass;
 }
 
-Func label_secondpass(GeneratorInput<Buffer<uint32_t>> &src, GeneratorInput<Buffer<uint32_t>> &buf, int32_t width, int32_t height, Expr bufW)
+Func label_secondpass(GeneratorInput<Buffer<uint32_t>> &src,
+                      GeneratorInput<Buffer<uint32_t>> &buf,
+                      int32_t width, int32_t height, Expr bufW,
+                      const bool auto_schedule = false)
 {
     Func secondPass;
     Var x, y;
@@ -1448,7 +1466,7 @@ Func label_secondpass(GeneratorInput<Buffer<uint32_t>> &src, GeneratorInput<Buff
 
     secondPass(x, y) = src(x, y);
     secondPass(x, y) = select(src(x, y) != 0 && buf(r.x, 0) == secondPass(x, y),
-                                 buf(r.x, 1), secondPass(x, y));
+                              buf(r.x, 1), secondPass(x, y));
 
     // secondPass.print_loop_nest();
     return secondPass;

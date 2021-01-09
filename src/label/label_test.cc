@@ -3,9 +3,8 @@
 #include <string>
 #include <exception>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 #include "label_u8.h"
 #include "label_u16.h"
@@ -14,6 +13,8 @@
 
 #include <map>
 #include <chrono>
+
+using namespace Halide::Tools;
 
 template<typename T>
 Halide::Runtime::Buffer<uint32_t>& label_ref(Halide::Runtime::Buffer<uint32_t>& dst,
@@ -212,7 +213,9 @@ int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
         expect = label_ref(expect, input, width, height);
 
         auto halide1_s = std::chrono::high_resolution_clock::now();
-        first_pass(input, pass1[0], pass1[1]);
+        const auto &result0 = benchmark([&]() {
+            first_pass(input, pass1[0], pass1[1]); });
+        std::cout << "Execution time 1st pass: " << double(result0) * 1e3 << "ms\n";
         auto halide1_e = std::chrono::high_resolution_clock::now();
 
         auto non_halide_s = std::chrono::high_resolution_clock::now();
@@ -222,7 +225,9 @@ int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
         int32_t bufWidth = buf.width();
 
         auto halide2_s = std::chrono::high_resolution_clock::now();
-        second_pass(pass1[0], buf, bufWidth,output);
+        const auto &result1 = benchmark([&]() {
+            second_pass(pass1[0], buf, bufWidth, output); });
+        std::cout << "Execution time 2nd pass: " << double(result1) * 1e3 << "ms\n";
         auto halide2_e = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double> dth1 = halide1_e - halide1_s;

@@ -1,6 +1,7 @@
 PROG:=label
 ANOTHER:=second_pass
 TYPE_LIST:=u8 u16
+AUTO_SCHEDULE:=true
 
 # Platform dependents
 UNAME_S := $(shell uname -s)
@@ -54,13 +55,16 @@ ${ANOTHER}_gen: ${ANOTHER}_generator.cc
 
 ${PROG}_gen.exec: ${PROG}_gen
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${PROG}_gen -o . \
-	-g label_u8 -e h,static_library target=host;
+	-g label_u8 -e h,static_library target=host \
+	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so -s Adams2019 auto_schedule=${AUTO_SCHEDULE} machine_params=8,8388608,40;
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${PROG}_gen -o . \
-	-g label_u16 -e h,static_library target=host;
+	-g label_u16 -e h,static_library target=host \
+	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so -s Adams2019 auto_schedule=${AUTO_SCHEDULE} machine_params=8,8388608,40
 
 ${ANOTHER}_gen.exec: ${ANOTHER}_gen
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${ANOTHER}_gen -o . \
-	-g second_pass -e h,static_library target=host;
+	-g second_pass -e h,static_library target=host \
+	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so -s Adams2019 auto_schedule=${AUTO_SCHEDULE} machine_params=8,8388608,40
 
 $(foreach type,${TYPE_LIST},${PROG}_${type}.a): ${PROG}_gen.exec
 $(foreach type,${TYPE_LIST},${PROG}_${type}.h): ${PROG}_gen.exec
