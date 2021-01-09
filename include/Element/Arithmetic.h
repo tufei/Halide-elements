@@ -301,7 +301,8 @@ Func cmpge(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
 }
 
 template<typename T, typename D>
-Func integral(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height, int32_t depth)
+Func integral(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height,
+              int32_t depth, const bool auto_schedule = false)
 {
     Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"}, integral{"integral"};
@@ -312,7 +313,7 @@ Func integral(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height, int3
 
     RDom r2{0, width, 1, height - 1, "r2"};
     integral(r2.x, r2.y, c) += integral(r2.x, r2.y - 1, c);
-    schedule(integral, {width, height, depth});
+    if (!auto_schedule) schedule(integral, {width, height, depth});
 
     dst(x, y, c) = cast<D>(integral(x, y, c));
 

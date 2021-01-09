@@ -4,9 +4,6 @@
 #include <exception>
 #include <climits>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "integral_u8_f32.h"
 #include "integral_u16_f32.h"
 #include "integral_u32_f32.h"
@@ -15,6 +12,9 @@
 #include "integral_u32_f64.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T, typename D>
 int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t *_dst_buffer))
@@ -33,7 +33,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         auto output = mk_null_buffer<D>(extents);
 
         D *expect = new D[height * width * depth];
-        
+
         // Reference impl.
         for (int c=0; c < depth; ++c) {
             std::vector<uint64_t> line_buffer(width);
@@ -47,7 +47,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
             }
         }
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
