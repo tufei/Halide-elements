@@ -3,13 +3,13 @@
 #include <string>
 #include <exception>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "gaussian_u8.h"
 #include "gaussian_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer, double _sigma, struct halide_buffer_t *_dst_buffer))
@@ -30,8 +30,10 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, double _sigma, struct 
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input, sigma, output);
-        
+        const auto &result = benchmark([&]() {
+            func(input, sigma, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         double kernel_sum = 0;
         for (int i = -(window_width/2); i < -(window_width/2) + window_width; i++) {
             for (int j = -(window_height/2); j < -(window_height/2) + window_height; j++) {

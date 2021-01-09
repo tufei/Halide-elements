@@ -20,10 +20,20 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = gaussian<T>(src, width, height, depth, window_width, window_height, sigma);
+        dst = gaussian<T>(src, width, height, depth,
+                          window_width, window_height, sigma,
+                          this->auto_schedule);
+    }
 
-        schedule(src, {width, height, depth});
-        schedule(dst, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            sigma.set_estimate(1.0f);
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 
