@@ -17,10 +17,17 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = laplacian<T>(src, width, height, depth);
+        dst = laplacian<T>(src, width, height, depth, this->auto_schedule);
+    }
 
-        schedule(src, {width, height, depth});
-        schedule(dst, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 8}, {0, 8}, {0, 3}});
+            dst.set_estimates({{0, 8}, {0, 8}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 

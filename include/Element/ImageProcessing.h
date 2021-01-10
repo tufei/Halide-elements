@@ -465,24 +465,34 @@ Func median(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32
 }
 
 template<typename T>
-Func laplacian(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height, int32_t depth) {
+Func laplacian(GeneratorInput<Buffer<T>> &in, int32_t width, int32_t height,
+               int32_t depth, const bool auto_schedule = false)
+{
     Var x{"x"}, y{"y"}, c{"c"};
 
-    Func clamped = BoundaryConditions::repeat_edge(in, {{0, width}, {0, height}, {0, depth}});
+    Func clamped = BoundaryConditions::repeat_edge(in,
+                                                   {{0, width},
+                                                    {0, height},
+                                                    {0, depth}});
     Func kernel("kernel");
     kernel(x, y) = cast<double>(-1);
     kernel(0, 0) = cast<double>(8);
 
     RDom r(-1, 3, -1, 3);
     Func dst("dst");
-    Expr dstval = sum(cast<double>(clamped(x + r.x, y + r.y, c)) * kernel(r.x, r.y));
+    Expr dstval = sum(cast<double>(clamped(x + r.x, y + r.y, c)) *
+                                   kernel(r.x, r.y));
     dstval = select(dstval < 0, -dstval, dstval);
-    dstval = select(dstval > type_of<T>().max(), cast<double>(type_of<T>().max()), dstval);
+    dstval = select(dstval > type_of<T>().max(),
+                    cast<double>(type_of<T>().max()),
+                    dstval);
     dst(x, y, c) = cast<T>(dstval);
 
-    kernel.compute_root();
-    kernel.bound(x, -1, 3);
-    kernel.bound(y, -1, 3);
+    if (!auto_schedule) {
+        kernel.compute_root();
+        kernel.bound(x, -1, 3);
+        kernel.bound(y, -1, 3);
+    }
 
     return dst;
 }

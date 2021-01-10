@@ -3,13 +3,13 @@
 #include <string>
 #include <exception>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "laplacian_u8.h"
 #include "laplacian_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 #define BORDER_INTERPOLATE(x, l) (x < 0 ? 0 : (x >= l ? l - 1 : x))
 
@@ -31,7 +31,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         double kernel[3][3] = {{-1, -1, -1}, {-1, 8, -1}, {-1, -1, -1}};
 
@@ -51,7 +53,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
                         sum = (std::numeric_limits<T>::max)();
                     T expect = static_cast<T>(sum);
                     T actual = output(j, i, c);
-                    
+
                     if (abs(expect - actual) > 1) {
                         // throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d", j, i, expect, j, i, actual).c_str());
                         printf("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d\n", j, i, c, expect, j, i, c, actual);
