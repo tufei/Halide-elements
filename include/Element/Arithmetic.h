@@ -219,7 +219,8 @@ Func min_value(GeneratorInput<Buffer<T>> &src, GeneratorInput<Buffer<uint8_t>> &
 }
 
 template<typename T>
-Func max(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
+Func max(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1,
+         const bool auto_schedule = false)
 {
     Var x{"x"}, y{"y"}, c{"c"};
 
