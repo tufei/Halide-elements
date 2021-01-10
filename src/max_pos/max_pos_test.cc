@@ -9,9 +9,11 @@
 #include "max_pos_f32.h"
 #include "max_pos_f64.h"
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using std::string;
 using std::vector;
+using namespace Halide::Tools;
 
 template <typename T, bool has_infinity>
 struct initial {};
@@ -31,7 +33,7 @@ std::tuple<uint32_t, uint32_t, uint32_t>
 max_pos_ref(const Halide::Runtime::Buffer<T>& src, const int width, const int height, const int depth) {
     T max = initial<T, std::numeric_limits<T>::has_infinity>::value();
     uint32_t max_x = 0, max_y = 0, max_c = 0;
-    
+
     for(int c = 0; c < depth; c++) {
         T cur_max = max;
         int l = -1;
@@ -72,7 +74,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<uint32_t>({3});
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         uint32_t expect_x, expect_y, expect_c;
         std::tie(expect_x, expect_y, expect_c) = max_pos_ref<T>(input, width, height, depth);
@@ -87,7 +91,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         std::cerr << e.what() << std::endl;
         return 1;
     }
-    
+
     printf("Success!\n");
     return 0;
 }

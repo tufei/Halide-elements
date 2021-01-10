@@ -17,10 +17,17 @@ public:
     GeneratorOutput<Buffer<uint32_t>> dst{"dst", 1};
 
     void generate() {
-        dst = max_pos<T>(src, width, height, depth);
+        dst = max_pos<T>(src, width, height, depth, this->auto_schedule);
+    }
 
-        schedule(src, {width, height, depth});
-        schedule(dst, {3});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(dst, {3});
+        }
     }
 };
 
