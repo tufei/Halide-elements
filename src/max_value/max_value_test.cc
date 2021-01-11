@@ -7,9 +7,12 @@
 #include "max_value_u16.h"
 #include "max_value_u32.h"
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using std::string;
 using std::vector;
+
+using namespace Halide::Tools;
 
 template <typename T, bool has_infinity>
 struct initial {};
@@ -61,7 +64,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         auto roi = mk_rand_buffer<uint8_t>(extents);
         auto output = mk_null_buffer<T>({1});
 
-        func(input, roi, output);
+        const auto &result = benchmark([&]() {
+            func(input, roi, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         T expect = max_value_ref<T>(input, roi, width, height, depth);
         T actual = output(0);
@@ -73,7 +78,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         std::cerr << e.what() << std::endl;
         return 1;
     }
-    
+
     printf("Success!\n");
     return 0;
 }
