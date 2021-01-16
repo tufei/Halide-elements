@@ -4,15 +4,15 @@
 #include <exception>
 #include <climits>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "merge4_u8.h"
 #include "merge4_u16.h"
 #include "merge4_i8.h"
 #include "merge4_i16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer0,
@@ -36,9 +36,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
             input[i] = mk_rand_buffer<T>(in_extents);
         }
         auto output = mk_null_buffer<T>(out_extents);
-        
+
         T *expect = new T[N * height * width];
-        
+
         // Reference impl.
         // first pass
         for (int y = 0; y < height; ++y) {
@@ -49,7 +49,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
             }
         }
 
-        func(input[0], input[1], input[2], input[3], output);
+        const auto &result = benchmark([&]() {
+            func(input[0], input[1], input[2], input[3], output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int y=0; y<height; ++y) {
             for (int x=0; x<width; ++x) {

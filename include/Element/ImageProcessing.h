@@ -366,7 +366,11 @@ Func color_interpolation_hsv2rgb(Func in)
 }
 
 template<typename T>
-Func merge3(GeneratorInput<Buffer<T>> &in0, GeneratorInput<Buffer<T>> &in1, GeneratorInput<Buffer<T>> &in2, int32_t width, int32_t height) {
+Func merge3(GeneratorInput<Buffer<T>> &in0,
+            GeneratorInput<Buffer<T>> &in1,
+            GeneratorInput<Buffer<T>> &in2,
+            int32_t width, int32_t height, const bool auto_schedule = false)
+{
     Var x{"x"}, y{"y"}, c{"c"};
     Func merge3{"merge3"};
 
@@ -379,7 +383,12 @@ Func merge3(GeneratorInput<Buffer<T>> &in0, GeneratorInput<Buffer<T>> &in1, Gene
 }
 
 template<typename T>
-Func merge4(GeneratorInput<Buffer<T>> &in0, GeneratorInput<Buffer<T>> &in1, GeneratorInput<Buffer<T>> &in2, GeneratorInput<Buffer<T>> &in3, int32_t width, int32_t height) {
+Func merge4(GeneratorInput<Buffer<T>> &in0,
+            GeneratorInput<Buffer<T>> &in1,
+            GeneratorInput<Buffer<T>> &in2,
+            GeneratorInput<Buffer<T>> &in3,
+            int32_t width, int32_t height, const bool auto_schedule = false)
+{
     Var x{"x"}, y{"y"}, c{"c"};
     Func merge4{"merge4"};
 

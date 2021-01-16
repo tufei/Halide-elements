@@ -18,12 +18,21 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = merge3<T>(src0, src1, src2, width, height);
+        dst = merge3<T>(src0, src1, src2, width, height, this->auto_schedule);
+    }
 
-        schedule(src0, {width, height});
-        schedule(src1, {width, height});
-        schedule(src2, {width, height});
-        schedule(dst, {width, height, 3});
+    void schedule() {
+        if (this->auto_schedule) {
+            src0.set_estimates({{0, 1024}, {0, 768}});
+            src1.set_estimates({{0, 1024}, {0, 768}});
+            src2.set_estimates({{0, 1024}, {0, 768}});
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src0, {width, height});
+            ::schedule(src1, {width, height});
+            ::schedule(src2, {width, height});
+            ::schedule(dst, {width, height, 3});
+        }
     }
 };
 
