@@ -392,10 +392,17 @@ Func merge4(GeneratorInput<Buffer<T>> &in0, GeneratorInput<Buffer<T>> &in1, Gene
     return merge4;
 }
 
-Func bitonic_sort(Func input, int32_t size, int32_t width, int32_t height, int32_t depth) {
+Func bitonic_sort(Func input, int32_t size, int32_t width, int32_t height,
+                  int32_t depth, const bool auto_schedule = false)
+{
     // rounding the size of input up to power of two
-    input = BoundaryConditions::constant_exterior(input, input.value().type().max(),
-        {{0, size}, {0, cast<int>(width)}, {0, cast<int>(height)}, {0, cast<int>(depth)}});
+    input =
+        BoundaryConditions::constant_exterior(input,
+                                              input.value().type().max(),
+                                              {{0, size},
+                                               {0, cast<int>(width)},
+                                               {0, cast<int>(height)},
+                                               {0, cast<int>(depth)}});
     size = std::pow(2, std::ceil(std::log2((double)size)));
 
     Func next, prev = input;
@@ -404,31 +411,37 @@ Func bitonic_sort(Func input, int32_t size, int32_t width, int32_t height, int32
 
     for (int pass_size = 1; pass_size < size; pass_size <<= 1) {
         for (int chunk_size = pass_size; chunk_size > 0; chunk_size >>= 1) {
-            next = Func("bitonic_pass_" + std::to_string(pass_size) + "_" + std::to_string(chunk_size));
-            Expr chunk_start = (i/(2*chunk_size))*(2*chunk_size);
-            Expr chunk_end = (i/(2*chunk_size) + 1)*(2*chunk_size);
+            next = Func("bitonic_pass_" + std::to_string(pass_size) + "_" +
+                        std::to_string(chunk_size));
+            Expr chunk_start = (i / (2 * chunk_size)) * (2 * chunk_size);
+            Expr chunk_end = (i / (2 * chunk_size) + 1) * (2 * chunk_size);
             Expr chunk_middle = chunk_start + chunk_size;
             Expr chunk_index = i - chunk_start;
             if (pass_size == chunk_size && pass_size > 1) {
                 // Flipped pass
-                Expr partner = 2*chunk_middle - i - 1;
+                Expr partner = 2 * chunk_middle - i - 1;
                 // We need a clamp here to help out bounds inference
-                partner = clamp(partner, chunk_start, chunk_end-1);
+                partner = clamp(partner, chunk_start, chunk_end - 1);
                 next(i, x, y, c) = select(i < chunk_middle,
-                                       min(prev(i, x, y, c), prev(partner, x, y, c)),
-                                       max(prev(i, x, y, c), prev(partner, x, y, c)));
+                                          min(prev(i, x, y, c),
+                                              prev(partner, x, y, c)),
+                                          max(prev(i, x, y, c),
+                                              prev(partner, x, y, c)));
             } else {
                 // Regular pass
-                Expr partner = chunk_start + (chunk_index + chunk_size) % (chunk_size*2);
+                Expr partner = chunk_start + (chunk_index + chunk_size) %
+                               (chunk_size * 2);
                 next(i, x, y, c) = select(i < chunk_middle,
-                                       min(prev(i, x, y, c), prev(partner, x, y, c)),
-                                       max(prev(i, x, y, c), prev(partner, x, y, c)));
-
-
+                                          min(prev(i, x, y, c),
+                                              prev(partner, x, y, c)),
+                                          max(prev(i, x, y, c),
+                                              prev(partner, x, y, c)));
             }
 
-            prev.compute_at(next, x);
-            next.unroll(i);
+            if (!auto_schedule) {
+                prev.compute_at(next, x);
+                next.unroll(i);
+            }
             prev = next;
         }
     }
@@ -437,12 +450,18 @@ Func bitonic_sort(Func input, int32_t size, int32_t width, int32_t height, int32
 }
 
 template<typename T>
-Func median(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth, int32_t window_width, int32_t window_height) {
+Func median(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height,
+            int32_t depth, int32_t window_width, int32_t window_height,
+            const bool auto_schedule = false)
+{
     Func in = src;
     Expr offset_x = window_width / 2, offset_y = window_height / 2;
     int32_t window_size = window_width * window_height;
 
-    Func clamped = BoundaryConditions::repeat_edge(in, {{0, width}, {0, height}, {0, depth}});
+    Func clamped = BoundaryConditions::repeat_edge(in,
+                                                   {{0, width},
+                                                    {0, height},
+                                                    {0, depth}});
     RDom r(-offset_x, window_width, -offset_y, window_height);
 
     Func window("window");
@@ -451,16 +470,22 @@ Func median(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32
     window(i, x, y, c) = undef(in.value().type());
     window((r.x + offset_x) + (r.y + offset_y) * window_width, x, y, c) =
         clamped(x + r.x, y + r.y, c);
-    window.unroll(i);
-    window.update(0).unroll(r.x);
-    window.update(0).unroll(r.y);
+    if (!auto_schedule) {
+        window.unroll(i);
+        window.update(0).unroll(r.x);
+        window.update(0).unroll(r.y);
+    }
 
-    Func sorted = bitonic_sort(window, window_size, width, height, depth);
+    Func sorted = bitonic_sort(window, window_size, width, height, depth,
+                               auto_schedule);
     Func median("median");
     median(x, y, c) = sorted(window_size / 2, x, y, c);
 
-    sorted.compute_at(median, x);
-    schedule(window, {window_size, width, height, depth});
+    if (!auto_schedule) {
+        sorted.compute_at(median, x);
+        schedule(window, {window_size, width, height, depth});
+    }
+
     return median;
 }
 

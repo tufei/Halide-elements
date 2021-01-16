@@ -3,13 +3,13 @@
 #include <string>
 #include <exception>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "median_u8.h"
 #include "median_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 #define BORDER_INTERPOLATE(x, l) (x < 0 ? 0 : (x >= l ? l - 1 : x))
 
@@ -35,13 +35,12 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         T *tmp = new T[depth * height * width];
         T (*expect)[height][width] = reinterpret_cast<T (*)[height][width]>(tmp);
 
-        
         const int offset_x = window_width / 2;
         const int offset_y = window_height / 2;
         const int window_area = window_width * window_height;
         size_t table_size = static_cast<size_t>(window_area);
         T table[table_size];
-        
+
         for (int c = 0; c < depth; c++) {
             for (int i = 0; i < height; i++) {
                 for (int j = 0; j < width; j++) {
@@ -56,8 +55,11 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
                 }
             }
         }
-        func(input, output);
-        
+
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
                 for (int x=0; x<width; ++x) {
