@@ -8,10 +8,14 @@
 #include "min_pos_u32.h"
 #include "min_pos_f32.h"
 #include "min_pos_f64.h"
+
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using std::string;
 using std::vector;
+
+using namespace Halide::Tools;
 
 template <typename T>
 std::tuple<uint32_t, uint32_t, uint32_t>
@@ -20,7 +24,7 @@ min_pos_ref(const Halide::Runtime::Buffer<T>& src, const int width, const int he
         ? std::numeric_limits<T>::infinity()
         : std::numeric_limits<T>::max();
     uint32_t min_x = 0, min_y = 0, min_c = 0;
-    
+
     for(int c = 0; c < depth; c++) {
         T cur_min = min;
         int l = -1;
@@ -61,7 +65,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<uint32_t>({3});
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         uint32_t expect_x, expect_y, expect_c;
         std::tie(expect_x, expect_y, expect_c) = min_pos_ref<T>(input, width, height, depth);

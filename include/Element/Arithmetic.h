@@ -172,7 +172,8 @@ Func nor(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1) {
 }
 
 template<typename T>
-Func min(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
+Func min(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1,
+         const bool auto_schedule = false)
 {
     Var x{"x"}, y{"y"}, c{"c"};
 
@@ -183,14 +184,15 @@ Func min(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
 }
 
 template<typename T>
-Func min_pos(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth)
+Func min_pos(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height,
+             int32_t depth, const bool auto_schedule = false)
 {
     Var x{"x"};
     RDom r{0, width, 0, height, 0, depth, "r"};
 
     Func res{"res"};
     res(x) = argmin(r, src(r.x, r.y, r.z));
-    schedule(res, {1});
+    if (!auto_schedule) schedule(res, {1});
 
     Var d{"d"};
     Func dst{"dst"};

@@ -18,11 +18,19 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = min<T>(src0, src1);
+        dst = min<T>(src0, src1, this->auto_schedule);
+    }
 
-        schedule(src0, {width, height, depth});
-        schedule(src1, {width, height, depth});
-        schedule(dst, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            src1.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src0, {width, height, depth});
+            ::schedule(src1, {width, height, depth});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 
