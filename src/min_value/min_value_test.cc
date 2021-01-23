@@ -6,7 +6,11 @@
 #include "min_value_u8.h"
 #include "min_value_u16.h"
 #include "min_value_u32.h"
+
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 using std::string;
 using std::vector;
@@ -50,7 +54,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         auto roi = mk_rand_buffer<uint8_t>(extents);
         auto output = mk_null_buffer<T>({1});
 
-        func(input, roi, output);
+        const auto &result = benchmark([&]() {
+            func(input, roi, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         T expect = min_value_ref<T>(input, roi, width, height, depth);
         T actual = output(0);
