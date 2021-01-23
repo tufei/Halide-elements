@@ -447,9 +447,10 @@ Func global_avgpool(Func bottom, const std::vector<int32_t>& bottom_shape, std::
 
 
 template<uint32_t FB>
-Func pool_fixed32(Func bottom, const std::vector<int32_t>& window_shape, int32_t stride, int32_t pad,
-                  const std::vector<int32_t>& bottom_shape, std::vector<int32_t>& top_shape,
-                  bool unroll = false)
+Func pool_fixed32(Func bottom, const std::vector<int32_t>& window_shape,
+                  int32_t stride, int32_t pad,
+                  const std::vector<int32_t>& bottom_shape,
+                  std::vector<int32_t>& top_shape, bool unroll = false)
 {
     Var x("x"), y("y"), c("c"), n("n");
 
@@ -461,9 +462,12 @@ Func pool_fixed32(Func bottom, const std::vector<int32_t>& window_shape, int32_t
     Func f;
     RDom r(0, window_shape[0], 0, window_shape[1]);
     if (unroll) {
-        f(c, x, y, n) = maximum_unroll(r, in(c, x*stride - pad + r.x, y*stride - pad + r.y, n));
+        f(c, x, y, n) =
+            maximum_unroll(r, in(c, x * stride - pad + r.x,
+                                 y * stride - pad + r.y, n));
     } else {
-        f(c, x, y, n) = maximum(r, in(c, x*stride - pad + r.x, y*stride - pad + r.y, n));
+        f(c, x, y, n) =
+            maximum(r, in(c, x * stride - pad + r.x, y * stride - pad + r.y, n));
     }
 
     top_shape = {
@@ -715,7 +719,8 @@ Func scale(Func bottom, ImageParam weight, ImageParam bias,
 
 template <typename T, uint32_t FB>
 Func scale_fixed32(Func bottom, T weight, T bias,
-                   const std::vector<int32_t>& bottom_shape, std::vector<int32_t>& top_shape)
+                   const std::vector<int32_t>& bottom_shape,
+                   std::vector<int32_t>& top_shape)
 {
     Var x("x"), y("y"), c("c"), n("n");
     Func f;

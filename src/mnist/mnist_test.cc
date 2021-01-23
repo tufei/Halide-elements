@@ -5,14 +5,13 @@
 #include <string>
 #include <vector>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
-
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 #include "mnist.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 template<typename Type>
 Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
@@ -87,7 +86,9 @@ int main(int argc, char **argv) {
 
         Buffer<float> out(classes, batch_size);
 
-        mnist(in, out);
+        const auto &result = benchmark([&]() {
+            mnist(in, out); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         Buffer<int> labels = load_data<int>("data/test_label_b1.bin");
 
