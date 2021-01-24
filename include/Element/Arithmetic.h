@@ -123,7 +123,9 @@ Func multiply(GeneratorInput<Buffer<T>> &src1, GeneratorInput<Buffer<T>> &src2)
 }
 
 template<typename T>
-Func mul_scalar(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<float>> &val)
+Func mul_scalar(GeneratorInput<Buffer<T>> &src0,
+                GeneratorInput<Buffer<float>> &val,
+                const bool auto_schedule = false)
 {
     Var x{"x"}, y{"y"}, c{"c"};
 
