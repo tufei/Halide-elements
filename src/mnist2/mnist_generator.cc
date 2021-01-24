@@ -21,12 +21,12 @@ class MNIST : public Halide::Generator<MNIST> {
 public:
     void generate()
     {
-        const std::vector<int32_t> input_shape{1, 28, 28, batch_size};
         // const std::string param_name = "data/LeNet.bin";
         const std::string param_name = "data/LeNet_binarize.bin";
 
-        Net net("LeNet-5");
         Type type = Float(32);
+
+        input_shape[3] = batch_size;
 
         net.add_layer("Conv", "conv1", type, 5, 20, 1, 0, true);
         net.add_layer("BatchNorm", "bn1", type);
@@ -46,14 +46,27 @@ public:
         net.add_layer("Linear", "ip4", type, 10);
         net.add_layer("Softmax", "prob", type);
 
-        net.setup(in, input_shape);
-        net.auto_schedule();
+        net.setup(in, input_shape, auto_schedule);
         net.load(param_name);
         net.print_info();
 
         Var c{"c"}, n{"n"};
         out(c, n) = net.output()(c, n);
     }
+
+    void schedule() {
+        if (auto_schedule) {
+            in.set_estimates({{0, 1}, {0, 28}, {0, 28}, {0, batch_size}});
+            out.set_estimates({{0, 10}, {0, batch_size}});
+        } else {
+            net.auto_schedule();
+        }
+    }
+
+private:
+    std::vector<int32_t> input_shape{1, 28, 28, 0};
+
+    Net net{"LeNet-5"};
 };
 
 HALIDE_REGISTER_GENERATOR(MNIST, mnist)

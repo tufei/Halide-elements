@@ -175,12 +175,13 @@ public:
         forward_ = Func(name_);
     }
 
-    void setup(Func& bottom_f, const std::vector<int32_t>& bottom_shape)
+    void setup(Func& bottom_f, const std::vector<int32_t>& bottom_shape,
+               const bool auto_schedule = false)
     {
         setup_shape(bottom_shape);
         setup_param();
         setup_forward(bottom_f);
-        setup_schedule();
+        if (!auto_schedule) setup_schedule();
     }
 
 
@@ -697,17 +698,20 @@ class LayerFactory
 {
 private:
     template<class T, class... Args>
-    static typename std::enable_if<std::is_constructible<T, Args...>::value, std::unique_ptr<T>>::type
+    static typename std::enable_if<std::is_constructible<T, Args...>::value,
+                                   std::unique_ptr<T>>::type
     create_(Args&& ...args)
     {
         return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
     }
 
     template<class T, class... Args>
-    static typename std::enable_if<!std::is_constructible<T, Args...>::value, std::unique_ptr<T>>::type
+    static typename std::enable_if<!std::is_constructible<T, Args...>::value,
+                                   std::unique_ptr<T>>::type
     create_(...)
     {
         std::runtime_error("Invalid argmuent types.");
+        return nullptr;
     }
 
 public:
@@ -737,6 +741,7 @@ public:
         }
 
         throw_error(format("Unknown layer kind: %s", kind.c_str()).c_str());
+        return nullptr;
     }
 
 };
@@ -787,14 +792,15 @@ public:
         last->layer_schedule();
     }
 
-    void setup(Func input, const std::vector<int32_t>& input_shape)
+    void setup(Func input, const std::vector<int32_t>& input_shape,
+               const bool auto_schedule = false)
     {
         Func& bottom_f = input;
         auto bottom_shape = input_shape;
 
         for (size_t i = 0; i < layers_.size(); i++)  {
             auto l = layers_[i];
-            l->setup(bottom_f, bottom_shape);
+            l->setup(bottom_f, bottom_shape, auto_schedule);
 
             bottom_f = l->forward();
             bottom_shape = l->top_shape();
