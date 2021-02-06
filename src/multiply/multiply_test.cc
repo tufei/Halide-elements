@@ -6,9 +6,12 @@
 #include "multiply_u8.h"
 #include "multiply_u16.h"
 #include "multiply_u32.h"
+
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer1, struct halide_buffer_t *_src_buffer2, struct halide_buffer_t *_dst_buffer)) {
@@ -25,9 +28,11 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer1, struct halide_buffer_
         auto src1 = mk_rand_buffer<T>(extents);
         auto src2 = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
-        
-        func(src1, src2, output);
-        
+
+        const auto &result = benchmark([&]() {
+            func(src1, src2, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
                 for (int x=0; x<width; ++x) {
