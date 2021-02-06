@@ -1,12 +1,12 @@
 #include <cstdint>
 
-#include "Halide.h"
 #include "Element.h"
+#include "Halide.h"
 
 using namespace Halide;
 using namespace Halide::Element;
 
-template<typename T>
+template <typename T>
 class Nand : public Halide::Generator<Nand<T>> {
 public:
     GeneratorInput<Buffer<T>> src0{"src0", 3};
@@ -20,10 +20,18 @@ public:
 
     void generate() {
         dst = nand<T>(src0, src1);
+    }
 
-        schedule(src0, {width, height, depth});
-        schedule(src1, {width, height, depth});
-        schedule(dst, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            src1.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src0, {width, height, depth});
+            ::schedule(src1, {width, height, depth});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 
