@@ -9,8 +9,10 @@
 
 #include "poc.h"
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 using std::string;
 using std::vector;
@@ -42,7 +44,9 @@ int main()
             }
         }
 
-        poc(input1, input2, output);
+        const auto &result = benchmark([&]() {
+            poc(input1, input2, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         int max_x = 0;
         int max_y = 0;
