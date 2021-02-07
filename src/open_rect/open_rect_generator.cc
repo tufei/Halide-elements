@@ -21,15 +21,27 @@ public:
     GeneratorOutput<Buffer<T>> dilated{"dilated", 3};
 
     void generate() {
-        Func eroded{"eroded"};
-
-        eroded = erode_rect<T>(src, width, height, depth, window_width, window_height, iteration);
-        dilated = dilate_rect<T>(eroded, width, height, depth, window_width, window_height, iteration);
-
-        schedule(src, {width, height, depth});
-        schedule(eroded, {width, height, depth});
-        schedule(dilated, {width, height, depth});
+        eroded = erode_rect<T>(src, width, height, depth,
+                               window_width, window_height,
+                               iteration, this->auto_schedule);
+        dilated = dilate_rect<T>(eroded, width, height, depth,
+                                 window_width, window_height,
+                                 iteration, this->auto_schedule);
     }
+
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dilated.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(eroded, {width, height, depth});
+            ::schedule(dilated, {width, height, depth});
+        }
+    }
+
+private:
+    Func eroded{"eroded"};
 };
 
 HALIDE_REGISTER_GENERATOR(OpenRect<uint8_t>, open_rect_u8);

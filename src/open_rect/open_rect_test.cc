@@ -11,6 +11,9 @@
 #include "open_rect_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 // returns index of result workbuf
 template<typename T>
@@ -77,10 +80,11 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         k = conv_rect(width, height, depth, window_width, window_height, iteration,
                       &workbuf[0][0][0][0], static_cast<const T&(*)(const T&, const T&)>(std::max), std::numeric_limits<T>::min(), k);
 
-        
         expect = &(workbuf[k%2]);
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
