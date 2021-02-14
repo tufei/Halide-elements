@@ -828,15 +828,25 @@ Func bilateral<uint16_t>(GeneratorInput<Buffer<uint16_t>> &src,
 }
 
 template <typename T>
-Func scale_NN(GeneratorInput<Buffer<T>> &src, int32_t in_width, int32_t in_height, int32_t out_width, int32_t out_height, int32_t depth)
+Func scale_NN(GeneratorInput<Buffer<T>> &src,
+              int32_t in_width, int32_t in_height,
+              int32_t out_width, int32_t out_height, int32_t depth,
+              const bool auto_schedule = false)
 {
     Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
-    Expr srcx = cast<int>(cast<float>(cast<float>(x)+cast<float>(0.5f))*cast<float>(in_width)/cast<float>(out_width));
-    Expr srcy = cast<int>(cast<float>(cast<float>(y)+cast<float>(0.5f))*cast<float>(in_height)/cast<float>(out_height));
-    Func clamped = BoundaryConditions::repeat_edge(src, 0, in_width, 0, in_height, 0, depth);
+
+    Expr srcx = cast<int>(cast<float>(cast<float>(x) + cast<float>(0.5f)) *
+                cast<float>(in_width) / cast<float>(out_width));
+    Expr srcy = cast<int>(cast<float>(cast<float>(y) + cast<float>(0.5f)) *
+                cast<float>(in_height) / cast<float>(out_height));
+    Func clamped = BoundaryConditions::repeat_edge(src,
+                                                   {{0, in_width},
+                                                    {0, in_height},
+                                                    {0, depth}});
 
     dst(x, y, c) = clamped(srcx, srcy, c);
+
     return dst;
 }
 

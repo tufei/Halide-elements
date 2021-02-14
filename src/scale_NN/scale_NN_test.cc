@@ -12,6 +12,9 @@
 #include "scale_NN_i16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 Halide::Runtime::Buffer<T>& ref_NN(Halide::Runtime::Buffer<T>& dst, const Halide::Runtime::Buffer<T>& src,
@@ -54,7 +57,10 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         auto input = mk_rand_buffer<T>(in_extents);
         auto output = mk_null_buffer<T>(out_extents);
 
-        func(input, output); //onl NN yet
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         auto expect = mk_null_buffer<T>(out_extents);
 
         expect = ref_NN(expect, input, in_width, in_height, out_width, out_height, depth);
