@@ -660,6 +660,7 @@ Func set_scalar(Expr val)
 {
     Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
+
     dst(x, y, c) = val;
 
     return dst;

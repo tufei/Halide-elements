@@ -19,7 +19,15 @@ public:
     void generate() {
         Expr src = value;
         dst = set_scalar(src);
-        schedule(dst, {width, height});
+    }
+
+    void schedule() {
+        if (this->auto_schedule) {
+            value.set_estimate(1);
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 

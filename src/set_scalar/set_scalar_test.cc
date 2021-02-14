@@ -11,8 +11,10 @@
 #include "set_scalar_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(T _value, struct halide_buffer_t *_dst_buffer)) {
@@ -24,7 +26,10 @@ int test(int (*func)(T _value, struct halide_buffer_t *_dst_buffer)) {
         const T value = mk_rand_scalar<T>(); //input scalar
         auto output = mk_null_buffer<T>(extents);
 
-        func(value, output);
+        const auto &result = benchmark([&]() {
+            func(value, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         //for each x and y
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
