@@ -12,8 +12,10 @@
 #include "sad_u32.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 using namespace std;
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer1,
@@ -55,7 +57,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer1,
             }
         }
 
-        func(input[0], input[1], output);
+        const auto &result = benchmark([&]() {
+            func(input[0], input[1], output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
 //		cout << "input[0]" << endl;
 //        for (int y=0; y<height; ++y) {
