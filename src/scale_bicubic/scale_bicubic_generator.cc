@@ -23,10 +23,18 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = scale_bicubic<T>(src, in_width, in_height,out_width, out_height, depth);
+        dst = scale_bicubic<T>(src, in_width, in_height,out_width, out_height,
+                               depth, this->auto_schedule);
+    }
 
-        schedule(src, {in_width, in_height, depth});
-        schedule(dst, {out_width, out_height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, 500}, {0, 500}, {0, 3}});
+        } else {
+            ::schedule(src, {in_width, in_height, depth});
+            ::schedule(dst, {out_width, out_height, depth});
+        }
     }
 };
 
