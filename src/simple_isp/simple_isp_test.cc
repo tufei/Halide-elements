@@ -7,12 +7,14 @@
 
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
+#include "halide_benchmark.h"
 
 #include "simple_isp.h"
 
 #include "test_common.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 Buffer<uint16_t> fill_bayer_pattern(int width, int height)
 {
@@ -60,13 +62,16 @@ int main(int argc, char **argv) {
 
         Buffer<uint16_t> input = fill_bayer_pattern(width, height);
         Buffer<uint8_t> output(4, width, height);
-               
+
         const uint16_t optical_black_clamp_value = 16;
         const float gamma_value = 1.0f/1.8f;
         const float saturation_value = 0.6f;
-        
-        simple_isp(input, optical_black_clamp_value, gamma_value, saturation_value, output);
-       
+
+        const auto &result = benchmark([&]() {
+            simple_isp(input, optical_black_clamp_value, gamma_value,
+                       saturation_value, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         save_ppm("out.ppm", output);
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

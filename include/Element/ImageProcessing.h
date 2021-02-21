@@ -201,11 +201,15 @@ Func gamma_correction(Func in, GeneratorInput<float> &value)
     return out;
 }
 
-Func optical_black_clamp(Func in, GeneratorInput<uint16_t> &clamp_value)
+Func optical_black_clamp(Func in, GeneratorInput<uint16_t> &clamp_value,
+                         const int32_t width, const int32_t height)
 {
     Var x, y;
     Func out;
-    out(x, y) = in(x, y) - min(in(x, y), clamp_value);
+    Func clamped = BoundaryConditions::repeat_edge(in,
+                                                   {{0, width},
+                                                    {0, height}});
+    out(x, y) = clamped(x, y) - min(clamped(x, y), clamp_value);
     return out;
 }
 
