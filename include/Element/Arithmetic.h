@@ -438,7 +438,8 @@ Func average_value(GeneratorInput<Buffer<S>> &src,
 }
 
 template<typename T>
-Func filter_or(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1) {
+Func filter_or(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1)
+{
     Var x{"x"}, y{"y"}, c{"c"};
     Func dst;
     dst(x, y, c) = src0(x, y, c) | src1(x, y, c);

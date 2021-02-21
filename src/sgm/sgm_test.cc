@@ -2,6 +2,7 @@
 
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
+#include "halide_benchmark.h"
 
 #include "test_common.h"
 #include "run_common.h"
@@ -9,6 +10,7 @@
 #include "sgm.h"
 
 using namespace Halide::Runtime;
+using namespace Halide::Tools;
 
 int main(int argc, char **argv) {
     try {
@@ -20,7 +22,9 @@ int main(int argc, char **argv) {
 
         Buffer<uint8_t> out(width, height);
 
-        sgm(in_l, in_r, out);
+        const auto &result = benchmark([&]() {
+            sgm(in_l, in_r, out); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         Buffer<uint8_t> disp = load_pgm("data/disp.pgm");
 

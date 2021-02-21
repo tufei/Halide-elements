@@ -15,7 +15,7 @@ Func addCost3(Func cost_ul, Func cost_u, Func cost_ur)
     return f;
 }
 
-Func disparity(Func cost, int32_t disp)
+Func disparity(Func cost, int32_t disp, const bool auto_schedule = false)
 {
     Var x("x"), y("y");
     RDom r(0, disp);
@@ -26,8 +26,10 @@ Func disparity(Func cost, int32_t disp)
     g(x, y) = Tuple(0, e.type().max());
     g(x, y) = tuple_select(e < g(x, y)[1], Tuple(r, e), g(x, y));
 
-    g.unroll(x).unroll(y)
-        .update().unroll(x).unroll(y).unroll(r[0]);
+    if (!auto_schedule) {
+        g.unroll(x).unroll(y)
+            .update().unroll(x).unroll(y).unroll(r[0]);
+    }
 
     Func f("disparity");
     f(x, y) = cast<uint8_t>(g(x, y)[0] * (UINT8_MAX+1) / disp);
@@ -81,7 +83,8 @@ Func matchingCost(Func left, Func right, int32_t width, int32_t height)
 }
 
 template <int32_t RX, int32_t RY, bool FORWARD>
-Func scanCost(Func cost, int32_t width, int32_t height, int32_t disp)
+Func scanCost(Func cost, int32_t width, int32_t height, int32_t disp,
+              const bool auto_schedule = false)
 {
     Var x("x"), y("y"), d("d");
 
@@ -134,10 +137,12 @@ Func scanCost(Func cost, int32_t width, int32_t height, int32_t disp)
                                     likely(lcost(clamp(rd - 1, 0, disp - 1), bx, by)[1]) > newCost, newCost,
                                     likely(lcost(clamp(rd - 1, 0, disp - 1), bx, by)[1]))));
 
-    schedule(lcost, {disp, width, height}).unroll(d)
-                                          .update()
-                                          .unroll(rd)
-                                          .allow_race_conditions();
+    if (!auto_schedule) {
+        schedule(lcost, {disp, width, height}).unroll(d)
+                                              .update()
+                                              .unroll(rd)
+                                              .allow_race_conditions();
+    }
 
     f(d, x, y) = lcost(d, x, y)[0];
 
@@ -146,7 +151,8 @@ Func scanCost(Func cost, int32_t width, int32_t height, int32_t disp)
 
 Func semi_global_matching(GeneratorInput<Buffer<uint8_t>> &src_l,
                           GeneratorInput<Buffer<uint8_t>> &src_r,
-                          int32_t width, int32_t height, int32_t disp)
+                          int32_t width, int32_t height, int32_t disp,
+                          const bool auto_schedule = false)
 {
     Func in_l = BoundaryConditions::repeat_edge(src_l);
     Func in_r = BoundaryConditions::repeat_edge(src_r);
@@ -162,27 +168,32 @@ Func semi_global_matching(GeneratorInput<Buffer<uint8_t>> &src_l,
     f1(d, x, y) = matchingCost(f0_l, f0_r, width, height)(d, x, y);
 
     Func f2_ul("scan_cost_ul");
-    f2_ul(d, x, y) = scanCost<1, 1, true>(f1, width, height, disp)(d, x, y);
+    f2_ul(d, x, y) = scanCost<1, 1, true>(f1, width, height,
+                                          disp, auto_schedule)(d, x, y);
 
     Func f2_u("scan_cost_u");
-    f2_u(d, x, y) = scanCost<0, 1, true>(f1, width, height, disp)(d, x, y);
+    f2_u(d, x, y) = scanCost<0, 1, true>(f1, width, height,
+                                         disp, auto_schedule)(d, x, y);
 
     Func f2_ur("scan_cost_ur");
-    f2_ur(d, x, y) = scanCost<-1, 1, true>(f1, width, height, disp)(d, x, y);
+    f2_ur(d, x, y) = scanCost<-1, 1, true>(f1, width, height,
+                                           disp, auto_schedule)(d, x, y);
 
     Func f3("add_cost");
     f3(d, x, y) = addCost3(f2_ul, f2_u, f2_ur)(d, x, y);
 
     Func f4("disparity");
-    f4(x, y) = disparity(f3, disp)(x, y);
+    f4(x, y) = disparity(f3, disp, auto_schedule)(x, y);
 
     Func out("out");
     out(x, y) = f4(x, y);
 
-    schedule(f0_l, {width, height});
-    schedule(f0_r, {width, height});
-    schedule(f1, {disp, width, height}).unroll(d);
-    schedule(f3, {disp, width, height}).unroll(d);
+    if (!auto_schedule) {
+        schedule(f0_l, {width, height});
+        schedule(f0_r, {width, height});
+        schedule(f1, {disp, width, height}).unroll(d);
+        schedule(f3, {disp, width, height}).unroll(d);
+    }
 
     return out;
 }
