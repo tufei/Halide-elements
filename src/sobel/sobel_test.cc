@@ -2,12 +2,15 @@
 
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
+#include "halide_benchmark.h"
 
 #include "sobel_u8.h"
 #include "sobel_u16.h"
 
 #include "test_common.h"
-#include "cstdlib"
+#include <cstdlib>
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_input_buffer, struct halide_buffer_t *_output_buffer))
@@ -51,7 +54,9 @@ int test(int (*func)(struct halide_buffer_t *_input_buffer, struct halide_buffer
             }
         }
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         // check expect match output
         for (int c=0; c<depth; ++c) {

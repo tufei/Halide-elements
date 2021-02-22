@@ -16,10 +16,17 @@ public:
     GeneratorOutput<Buffer<T>> output{"output", 3};
 
     void generate() {
-        output = sobel<T>(input, width, height, depth);
+        output = sobel<T>(input, width, height, depth, this->auto_schedule);
+    }
 
-        schedule(input, {width, height, depth});
-        schedule(output, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            output.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(input, {width, height, depth});
+            ::schedule(output, {width, height, depth});
+        }
     }
 };
 

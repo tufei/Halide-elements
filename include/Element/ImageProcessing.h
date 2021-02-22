@@ -565,28 +565,34 @@ Func prewitt(GeneratorInput<Buffer<T>> &input, int32_t width, int32_t height,
 }
 
 template<typename T>
-Func sobel(GeneratorInput<Buffer<T>> &input, int32_t width, int32_t height, int32_t depth)
+Func sobel(GeneratorInput<Buffer<T>> &input, int32_t width, int32_t height,
+           int32_t depth, const bool auto_schedule = false)
 {
     Var x, y, c;
     Func input_f("input_f");
     input_f(x, y, c) = cast<float>(input(x, y, c));
 
-    Func clamped = BoundaryConditions::repeat_edge(input_f, {{0, cast<int32_t>(width)}, {0, cast<int32_t>(height)}, {0, cast<int32_t>(depth)}});
+    Func clamped = BoundaryConditions::repeat_edge(input_f,
+                                                   {{0, width},
+                                                    {0, height},
+                                                    {0, depth}});
 
     Func diff_x("diff_x"), diff_y("diff_y");
-    diff_x(x, y, c) = -clamped(x-1, y-1, c) + clamped(x+1, y-1, c) +
-                   -2 * clamped(x-1, y, c) + 2 * clamped(x+1, y, c) +
-                   -clamped(x-1, y+1, c) + clamped(x+1, y+1, c);
+    diff_x(x, y, c) = -clamped(x - 1, y - 1, c) + clamped(x + 1, y - 1, c) +
+                      -2 * clamped(x - 1, y, c) + 2 * clamped(x + 1, y, c) +
+                      -clamped(x - 1, y + 1, c) + clamped(x + 1, y + 1, c);
 
-    diff_y(x, y, c) = -clamped(x-1, y-1, c) + clamped(x-1, y+1, c) +
-                   -2 * clamped(x, y-1, c) + 2 * clamped(x, y+1, c) +
-                   -clamped(x+1, y-1, c) + clamped(x+1, y+1, c);
+    diff_y(x, y, c) = -clamped(x - 1, y - 1, c) + clamped(x - 1, y + 1, c) +
+                      -2 * clamped(x, y - 1, c) + 2 * clamped(x, y + 1, c) +
+                      -clamped(x + 1, y - 1, c) + clamped(x + 1, y + 1, c);
 
     Func output("output");
     output(x, y, c) = cast<T>(hypot(diff_x(x, y, c), diff_y(x, y, c)));
 
-    schedule(diff_x, {width, height, depth});
-    schedule(diff_y, {width, height, depth});
+    if (!auto_schedule) {
+        schedule(diff_x, {width, height, depth});
+        schedule(diff_y, {width, height, depth});
+    }
 
     return output;
 }
