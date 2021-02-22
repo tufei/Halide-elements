@@ -23,8 +23,16 @@ public:
                    cos(to_fixed<30, 25>(src(x, y, c))));
         dst(x, y, c) = from_fixed<float>(e);
 
-        schedule(src, {width, height, depth});
-        schedule(dst, {width, height, depth});
+    }
+
+    void schedule() {
+        if (auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 

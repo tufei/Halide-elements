@@ -11,6 +11,9 @@
 #include "sin_cos.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 int test(int (*func)(struct halide_buffer_t *_src_buffer1, struct halide_buffer_t *_dst_buffer))
 {
@@ -27,7 +30,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer1, struct halide_buffer_
         auto input = mk_rand_real_buffer<float>(extents, 0, 1);
         auto output = mk_null_buffer<float>(extents);
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         double diff_max = 0.0;
         for (int c=0; c<depth; ++c) {
