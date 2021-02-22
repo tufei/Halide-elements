@@ -17,9 +17,18 @@ public:
 
     void generate() {
         dst = split3<T>(src, width, height);
+    }
 
-        schedule(src, {width, height, 3});
-        //schedule(dst, {width, height});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            for (auto &buffer : static_cast<Func>(dst).output_buffers()) {
+                buffer.set_estimates({{0, 1024}, {0, 768}});
+            }
+        } else {
+            ::schedule(src, {width, height, 3});
+            //::schedule(dst, {width, height});
+        }
     }
 };
 
