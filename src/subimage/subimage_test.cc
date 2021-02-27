@@ -6,10 +6,13 @@
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 #include "subimage_u8.h"
 #include "subimage_u16.h"
 #include "subimage_u32.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer,
@@ -44,7 +47,10 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
             }
         }
 
-        func(input, origin_x, origin_y, output);
+        const auto &result = benchmark([&]() {
+            func(input, origin_x, origin_y, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         //for each x, y, and c
         for (int c=0; c<out_depth; ++c) {
             for (int i=0; i<out_height; ++i) {

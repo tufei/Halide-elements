@@ -24,8 +24,18 @@ public:
 
     void generate() {
         dst = subimage<T>(src, origin_x, origin_y);
-        schedule(src, {in_width, in_height, in_depth});
-        schedule(dst, {out_width, out_height, in_depth});
+    }
+
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            origin_x.set_estimate(1);
+            origin_y.set_estimate(1);
+            dst.set_estimates({{0, 500}, {0, 500}, {0, 3}});
+        } else {
+            ::schedule(src, {in_width, in_height, in_depth});
+            ::schedule(dst, {out_width, out_height, in_depth});
+        }
     }
 };
 
