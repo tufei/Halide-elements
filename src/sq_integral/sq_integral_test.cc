@@ -15,6 +15,9 @@
 #include "sq_integral_u32_f64.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T, typename D>
 int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t *_dst_buffer))
@@ -43,7 +46,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
             }
         }
 
-        func(input, output);
+        const auto &result = benchmark([&]() {
+            func(input, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         // for each x and y
         for (int c=0; c<depth; ++c) {

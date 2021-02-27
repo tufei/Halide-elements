@@ -390,18 +390,19 @@ Func filter_xor(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1
 }
 
 template<typename T, typename D>
-Func sq_integral(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height, int32_t depth)
+Func sq_integral(GeneratorInput<Buffer<T>> &src, int32_t width, int32_t height,
+                 int32_t depth)
 {
     Var x{"x"}, y{"y"}, c{"c"};
     Func dst{"dst"};
 
     dst(x, y, c) = cast<D>(src(x, y, c)) * cast<D>(src(x, y, c));
 
-    RDom h{1, width-1, 0, height, "h"};
-    dst(h.x, h.y, c) += dst(h.x-1, h.y, c);
+    RDom h{1, width - 1, 0, height, "h"};
+    dst(h.x, h.y, c) += dst(h.x - 1, h.y, c);
 
-    RDom v{0, width, 1, height-1, "v"};
-    dst(v.x, v.y, c) += dst(v.x, v.y-1, c);
+    RDom v{0, width, 1, height - 1, "v"};
+    dst(v.x, v.y, c) += dst(v.x, v.y - 1, c);
 
     return dst;
 }
