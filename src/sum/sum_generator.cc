@@ -19,9 +19,16 @@ public:
 
     void generate() {
         dst = sum<T, D>(src, width, height, depth);
+    }
 
-        schedule(src, {width, height, depth});
-        schedule(dst, {1, 1, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, 1}, {0, 1}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(dst, {1, 1, depth});
+        }
     }
 };
 
