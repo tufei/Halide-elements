@@ -13,6 +13,9 @@
 #include "split4_i16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer,
@@ -43,7 +46,10 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
                 }
             }
         }
-        func(input, output[0], output[1], output[2], output[3]);
+
+        const auto &result = benchmark([&]() {
+            func(input, output[0], output[1], output[2], output[3]); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         for (int y=0; y<height; ++y) {
             for (int x=0; x<width; ++x) {

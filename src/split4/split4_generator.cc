@@ -13,13 +13,23 @@ public:
     GeneratorParam<int32_t> width{"width", 1024};
     GeneratorParam<int32_t> height{"height", 768};
 
-    GeneratorOutput<Buffer<>> dst{"dst", {type_of<T>(), type_of<T>(), type_of<T>(), type_of<T>()}, 2};
+    GeneratorOutput<Buffer<>> dst{"dst", {type_of<T>(), type_of<T>(),
+                                          type_of<T>(), type_of<T>()}, 2};
 
     void generate() {
         dst = split4<T>(src, width, height);
+    }
 
-        schedule(src, {width, height, 4});
-        //schedule(dst, {width, height});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 4}});
+            for (auto &buffer : static_cast<Func>(dst).output_buffers()) {
+                buffer.set_estimates({{0, 1024}, {0, 768}});
+            }
+        } else {
+            ::schedule(src, {width, height, 4});
+            //::schedule(dst, {width, height});
+        }
     }
 };
 
