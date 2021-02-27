@@ -21,9 +21,17 @@ public:
 
     void generate() {
         dst = sub_scalar<T>(src, value);
+    }
 
-        schedule(src, {width, height, depth});
-        schedule(dst, {width, height, depth});
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            value.set_estimate(1);
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 
