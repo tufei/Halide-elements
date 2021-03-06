@@ -11,6 +11,9 @@
 #include "threshold_max_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 Halide::Runtime::Buffer<T>& max_ref(Halide::Runtime::Buffer<T>& dst,
@@ -44,7 +47,10 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input, threshold, output);
+        const auto &result = benchmark([&]() {
+            func(input, threshold, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         auto expect = mk_rand_buffer<T>(extents);
         expect = max_ref(expect, input, width, height, depth, threshold);
 
