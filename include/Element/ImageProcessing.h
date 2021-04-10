@@ -655,7 +655,9 @@ Func tm_ncc(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1,
 }
 
 template <typename T>
-Func tm_zncc(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, const int32_t img_width, const int32_t img_height, const int32_t tmp_width, const int32_t tmp_height)
+Func tm_zncc(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1,
+             const int32_t img_width, const int32_t img_height,
+             const int32_t tmp_width, const int32_t tmp_height)
 {
     Var x{"x"}, y{"y"}, c{"c"};
 
@@ -668,9 +670,12 @@ Func tm_zncc(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, c
     avr1 = sum(cast<double>(src1(r.x, r.y))) / tmp_size;
 
     Expr sum1{"sum1"}, sum2{"sum2"}, sum3{"sum3"};
-    sum1 = sum(cast<double>(src0(x + r.x, y + r.y, c) - avr0) * cast<double>(src1(r.x, r.y) - avr1));
-    sum2 = sum(cast<double>(src0(x + r.x, y + r.y, c) - avr0) * cast<double>(src0(x + r.x, y + r.y, c) - avr0));
-    sum3 = sum(cast<double>(src1(r.x, r.y) - avr1) * cast<double>(src1(r.x, r.y) - avr1));
+    sum1 = sum(cast<double>(src0(x + r.x, y + r.y, c) - avr0) *
+               cast<double>(src1(r.x, r.y) - avr1));
+    sum2 = sum(cast<double>(src0(x + r.x, y + r.y, c) - avr0) *
+               cast<double>(src0(x + r.x, y + r.y, c) - avr0));
+    sum3 = sum(cast<double>(src1(r.x, r.y) - avr1) *
+               cast<double>(src1(r.x, r.y) - avr1));
     out(x, y, c) = sum1 / sqrt(sum2 * sum3);
 
     return out;

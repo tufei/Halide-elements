@@ -6,6 +6,7 @@
 
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
+#include "halide_benchmark.h"
 
 #include "tm_zncc_u8.h"
 #include "tm_zncc_u16.h"
@@ -13,6 +14,8 @@
 
 #include "test_common.h"
 #include "timing.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_t *_src1_buffer, struct halide_buffer_t *_dst_buffer))
@@ -52,9 +55,9 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_
             }
         }
 
-        reset_and_start_timer();
-        func(input0, input1, output);
-        printf("Halide implementation took %lf million cycles\n", get_elapsed_mcycles());
+        const auto &result = benchmark([&]() {
+            func(input0, input1, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         reset_and_start_timer();
         const double tmp_size = static_cast<double>(tmp_width * tmp_height);
