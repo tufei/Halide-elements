@@ -22,13 +22,25 @@ public:
     void generate() {
         dst = tm_ssd<T>(src0, src1, img_width, img_height, tmp_width, tmp_height);
 
-        const int32_t res_width = img_width.value() - tmp_width.value() + 1;
-        const int32_t res_height = img_height.value() - tmp_height.value() + 1;
-
-        schedule(src0, {img_width, img_height, img_depth});
-        schedule(src1, {tmp_width, tmp_height});
-        schedule(dst, {res_width, res_height, img_depth});
+        res_width = img_width.value() - tmp_width.value() + 1;
+        res_height = img_height.value() - tmp_height.value() + 1;
     }
+
+    void schedule() {
+        if (this->auto_schedule) {
+            src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            src1.set_estimates({{0, 16}, {0, 16}});
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src0, {img_width, img_height, img_depth});
+            ::schedule(src1, {tmp_width, tmp_height});
+            ::schedule(dst, {res_width, res_height, img_depth});
+        }
+    }
+
+private:
+    int32_t res_width;
+    int32_t res_height;
 };
 
 HALIDE_REGISTER_GENERATOR(TmSsd<uint8_t>, tm_ssd_u8);
