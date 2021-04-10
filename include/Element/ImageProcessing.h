@@ -613,7 +613,9 @@ Func tm_ssd(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, co
 }
 
 template <typename T>
-Func tm_sad(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, const int32_t img_width, const int32_t img_height, const int32_t tmp_width, const int32_t tmp_height)
+Func tm_sad(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1,
+            const int32_t img_width, const int32_t img_height,
+            const int32_t tmp_width, const int32_t tmp_height)
 {
     Var x{"x"}, y{"y"}, c{"c"};
 
@@ -621,7 +623,8 @@ Func tm_sad(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, co
 
     Func out{"out"};
     Expr diff{"diff"};
-    diff = cast<double>(src0(x + r.x, y + r.y, c)) - cast<double>(src1(r.x, r.y));
+    diff = cast<double>(src0(x + r.x, y + r.y, c)) -
+           cast<double>(src1(r.x, r.y));
     out(x, y, c) = sum(abs(diff));
 
     return out;
