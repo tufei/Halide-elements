@@ -628,7 +628,9 @@ Func tm_sad(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, co
 }
 
 template <typename T>
-Func tm_ncc(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, const int32_t img_width, const int32_t img_height, const int32_t tmp_width, const int32_t tmp_height)
+Func tm_ncc(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1,
+            const int32_t img_width, const int32_t img_height,
+            const int32_t tmp_width, const int32_t tmp_height)
 {
     Var x{"x"}, y{"y"}, c{"c"};
 
@@ -636,8 +638,10 @@ Func tm_ncc(GeneratorInput<Buffer<T>> &src0, GeneratorInput<Buffer<T>> &src1, co
 
     Func out{"out"};
     Expr sum1{"sum1"}, sum2{"sum2"}, sum3{"sum3"};
-    sum1 = sum(cast<double>(src0(x + r.x, y + r.y, c)) * cast<double>(src1(r.x, r.y)));
-    sum2 = sum(cast<double>(src0(x + r.x, y + r.y, c)) * cast<double>(src0(x + r.x, y + r.y, c)));
+    sum1 = sum(cast<double>(src0(x + r.x, y + r.y, c)) *
+               cast<double>(src1(r.x, r.y)));
+    sum2 = sum(cast<double>(src0(x + r.x, y + r.y, c)) *
+               cast<double>(src0(x + r.x, y + r.y, c)));
     sum3 = sum(cast<double>(src1(r.x, r.y)) * cast<double>(src1(r.x, r.y)));
     out(x, y, c) = sum1 / sqrt(sum2 * sum3);
 
