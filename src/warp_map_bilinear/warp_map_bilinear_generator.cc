@@ -21,11 +21,23 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = warp_map_bilinear<T>(src0, src1, src2, border_type, border_value, width, height, depth);
-        schedule(src0, {width, height, depth});
-        schedule(src1, {width, height});
-        schedule(src2, {width, height});
-        schedule(dst, {width, height, depth});
+        dst = warp_map_bilinear<T>(src0, src1, src2, border_type,
+                                   border_value, width, height, depth);
+    }
+
+    void schedule() {
+        if (this->auto_schedule) {
+            src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            src1.set_estimates({{0, 1024}, {0, 768}});
+            src2.set_estimates({{0, 1024}, {0, 768}});
+            border_value.set_estimate(0);
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src0, {width, height, depth});
+            ::schedule(src1, {width, height});
+            ::schedule(src2, {width, height});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 

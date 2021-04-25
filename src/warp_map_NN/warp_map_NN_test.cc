@@ -10,6 +10,10 @@
 #include "warp_map_NN_u8.h"
 #include "warp_map_NN_u16.h"
 
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
+
 #define BORDER_INTERPOLATE(x, l) (x < 0 ? 0 : (x >= l ? l - 1 : x))
 
 template<typename T>
@@ -84,7 +88,9 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
         auto output = mk_null_buffer<T>(extents_3d);
 
 
-        func(input0, input1, input2, border_value, output);
+        const auto &result = benchmark([&]() {
+            func(input0, input1, input2, border_value, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         auto expect = mk_null_buffer<T>(extents_3d);
         expect = warp_map_NN_ref(expect, input0, input1, input2, border_value, border_type, width, height, depth);
