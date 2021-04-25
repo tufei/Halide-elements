@@ -20,10 +20,21 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = warp_affine_bicubic<T>(src, border_type, border_value, transform, width, height, depth);
-        schedule(src, {width, height, depth});
-        schedule(transform, {6});
-        schedule(dst, {width, height, depth});
+        dst = warp_affine_bicubic<T>(src, border_type, border_value,
+                                     transform, width, height, depth);
+    }
+
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            border_value.set_estimate(0);
+            transform.set_estimates({{0, 6}});
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(transform, {6});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 
