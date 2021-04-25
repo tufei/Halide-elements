@@ -11,6 +11,9 @@
 #include "warp_perspective_NN_u16.h"
 
 #include "test_common.h"
+#include "halide_benchmark.h"
+
+using namespace Halide::Tools;
 
 #define BORDER_INTERPOLATE(x, l) (x < 0 ? 0 : (x >= l ? l - 1 : x))
 
@@ -93,7 +96,10 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input, border_value, transform, output);
+        const auto &result = benchmark([&]() {
+            func(input, border_value, transform, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         auto expect = mk_null_buffer<T>(extents);
         expect = NN_ref(expect, input, width, height, depth, border_value, border_type, transform);
 

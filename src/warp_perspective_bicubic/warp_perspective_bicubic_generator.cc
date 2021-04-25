@@ -22,9 +22,19 @@ public:
     void generate() {
         dst = warp_perspective_bicubic<T>(src, border_type, border_value,
                                           transform, width, height, depth);
-        schedule(src, {width, height, depth});
-        schedule(transform, {9});
-        schedule(dst, {width, height, depth});
+    }
+
+    void schedule() {
+        if (this->auto_schedule) {
+            src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            transform.set_estimates({{0, 9}});
+            border_value.set_estimate(0);
+            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+        } else {
+            ::schedule(src, {width, height, depth});
+            ::schedule(transform, {9});
+            ::schedule(dst, {width, height, depth});
+        }
     }
 };
 
