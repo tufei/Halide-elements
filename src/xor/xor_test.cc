@@ -6,10 +6,13 @@
 #include "HalideRuntime.h"
 #include "HalideBuffer.h"
 #include "test_common.h"
+#include "halide_benchmark.h"
 
 #include "xor_u8.h"
 #include "xor_u16.h"
 #include "xor_u32.h"
+
+using namespace Halide::Tools;
 
 template<typename T>
 int test(int (*func)(struct halide_buffer_t *_src0_buffer,
@@ -25,7 +28,10 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer,
         auto input1 = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input0, input1, output);
+        const auto &result = benchmark([&]() {
+            func(input0, input1, output); });
+        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+
         for (int c=0; c<depth; ++c) {
             //for each x and y
             for (int j=0; j<height; ++j) {
