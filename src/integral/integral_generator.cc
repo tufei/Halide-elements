@@ -17,11 +17,12 @@ public:
     GeneratorOutput<Buffer<D>> dst{"dst", 3};
 
     void generate() {
-        dst = integral<T, D>(src, width, height, depth, this->auto_schedule);
+        dst = integral<T, D>(src, width, height, depth,
+                             this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
         } else {

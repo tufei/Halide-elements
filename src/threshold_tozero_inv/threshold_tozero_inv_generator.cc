@@ -23,7 +23,7 @@ public:
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             threshold.set_estimate(128);
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});

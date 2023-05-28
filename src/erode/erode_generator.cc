@@ -24,11 +24,11 @@ public:
     void generate() {
         dst = erode<T>(src, width, height, depth,
                        window_width, window_height,
-                       structure, iteration, this->auto_schedule);
+                       structure, iteration, this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             structure.set_estimates({{0, 3}, {0, 3}});
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});

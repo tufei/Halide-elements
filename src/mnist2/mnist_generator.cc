@@ -46,7 +46,7 @@ public:
         net.add_layer("Linear", "ip4", type, 10);
         net.add_layer("Softmax", "prob", type);
 
-        net.setup(in, input_shape, auto_schedule);
+        net.setup(in, input_shape, using_autoscheduler());
         net.load(param_name);
         net.print_info();
 
@@ -55,7 +55,7 @@ public:
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             in.set_estimates({{0, 1}, {0, 28}, {0, 28}, {0, batch_size}});
             out.set_estimates({{0, 10}, {0, batch_size}});
         } else {

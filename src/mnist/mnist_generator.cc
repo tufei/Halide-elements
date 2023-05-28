@@ -188,11 +188,11 @@ public:
         //Func prob("prob");
         prob(i, n) =
             softmax(tof, tof_top_shape, prob_top_shape,
-                    false, auto_schedule)(i, n);
+                    false, using_autoscheduler())(i, n);
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             in.set_estimates({{0, 1}, {0, 28}, {0, 28}, {0, batch_size}});
             prob.set_estimates({{0, 10}, {0, batch_size}});
         } else {

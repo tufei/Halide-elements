@@ -17,11 +17,12 @@ public:
     GeneratorOutput<Buffer<uint32_t>> dst{"dst", 2};
 
     void generate() {
-        dst = label_secondpass(src, buf, width, height, bufW, auto_schedule);
+        dst = label_secondpass(src, buf, width, height, bufW,
+                               using_autoscheduler());
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}});
             buf.set_estimates({{0, 1024}, {0, 768}});
             bufW.set_estimate(1);

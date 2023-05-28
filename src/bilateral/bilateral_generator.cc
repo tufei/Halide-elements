@@ -23,11 +23,11 @@ public:
     void generate() {
         dst = bilateral<T>(src, width, height, depth,
                            window_size, sigma_color, sigma_space,
-                           this->auto_schedule);
+                           this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             window_size.set_estimate(5);
             sigma_color.set_estimate(2.0f);

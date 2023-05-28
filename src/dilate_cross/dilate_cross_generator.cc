@@ -23,11 +23,11 @@ public:
     void generate() {
         output = dilate_cross<T>(input, width, height, depth,
                                  window_width, window_height,
-                                 iteration, this->auto_schedule);
+                                 iteration, this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             output.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
         } else {

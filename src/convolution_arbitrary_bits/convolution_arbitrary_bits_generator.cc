@@ -31,11 +31,11 @@ public:
         out = convolution<uint8_t, int32_t, NB, FB>(in, width, height, depth,
                                                     kernel, kernel_size,
                                                     unroll_factor,
-                                                    auto_schedule);
+                                                    using_autoscheduler());
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             in.set_estimates({{0, 512}, {0, 512}, {0, 3}});
             kernel.set_estimates({{0, 3}, {0, 3}});
             kernel_size.set_estimate(3);

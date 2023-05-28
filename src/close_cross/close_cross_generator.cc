@@ -21,21 +21,22 @@ public:
   GeneratorOutput<Buffer<T>> erode_crossed{"erode_crossed", 3};
 
   void generate() {
+    const auto auto_schedule = this->using_autoscheduler();
     // Run dilate
     dilate_crossed =
         dilate_cross<T>(input, width, height, depth,
                         window_width, window_height,
-                        iteration, this->auto_schedule);
+                        iteration, auto_schedule);
 
     // Run erode
     erode_crossed =
         erode_cross<T>(dilate_crossed, width, height, depth,
                        window_width, window_height,
-                       iteration, this->auto_schedule);
+                       iteration, auto_schedule);
   }
 
   void schedule() {
-      if (this->auto_schedule) {
+      if (this->using_autoscheduler()) {
           input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
           erode_crossed.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
       } else {

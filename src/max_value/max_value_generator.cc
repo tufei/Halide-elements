@@ -19,11 +19,11 @@ public:
 
     void generate() {
         dst = max_value<T>(src, roi, width, height, depth,
-                           this->auto_schedule);
+                           this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             roi.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, 1}});

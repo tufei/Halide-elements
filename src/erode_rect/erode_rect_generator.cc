@@ -22,11 +22,11 @@ public:
     void generate() {
         dst = erode_rect<T>(src, width, height, depth,
                             window_width, window_height,
-                            iteration, this->auto_schedule);
+                            iteration, this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
         } else {

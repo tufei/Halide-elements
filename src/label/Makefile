@@ -27,7 +27,7 @@ endif
 BUILD_BY_CMAKE:=$(shell ls ${HALIDE_LIB_CMAKE} | grep -x ${HALIDE_LIB})
 BUILD_BY_MAKE:=$(shell ls ${HALIDE_LIB_MAKE} | grep -x ${HALIDE_LIB})
 
-VIVADO_HLS_ROOT?=/opt/Xilinx/Vivado_HLS/2017.2/
+VITIS_HLS_ROOT?=/cad/Xilinx/Vitis_HLS/2022.2/
 DRIVER_ROOT=./${PROG}.hls/${PROG}_zynq.sdk/design_1_wrapper_hw_platform_0/drivers/${PROG}_hp_wrapper_v1_0/src/
 TARGET_SRC=${PROG}_run.c ${DRIVER_ROOT}/x${PROG}_hp_wrapper.c ${DRIVER_ROOT}/x${PROG}_hp_wrapper_linux.c
 TARGET_LIB=-lm
@@ -39,8 +39,8 @@ else ifeq (${BUILD_BY_MAKE}, ${HALIDE_LIB})
 	HALIDE_LIB_DIR=${HALIDE_LIB_MAKE}
 endif
 
-CXXFLAGS:=-O2 -g -std=c++11 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
-CSIM_CXXFLAGS:=-O2 -g -std=c++11 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
+CXXFLAGS:=-O2 -g -ggdb -std=c++20 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
+CSIM_CXXFLAGS:=-O2 -g -ggdb -std=c++20 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
 LIBS:=-ldl -lpthread -lz
 
 .PHONY: clean
@@ -56,15 +56,15 @@ ${ANOTHER}_gen: ${ANOTHER}_generator.cc
 ${PROG}_gen.exec: ${PROG}_gen
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${PROG}_gen -o . \
 	-g label_u8 -e h,static_library target=host \
-	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so -s Adams2019 auto_schedule=${AUTO_SCHEDULE} machine_params=8,8388608,40;
+	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so autoscheduler=Adams2019
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${PROG}_gen -o . \
 	-g label_u16 -e h,static_library target=host \
-	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so -s Adams2019 auto_schedule=${AUTO_SCHEDULE} machine_params=8,8388608,40
+	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so autoscheduler=Adams2019
 
 ${ANOTHER}_gen.exec: ${ANOTHER}_gen
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./${ANOTHER}_gen -o . \
 	-g second_pass -e h,static_library target=host \
-	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so -s Adams2019 auto_schedule=${AUTO_SCHEDULE} machine_params=8,8388608,40
+	-p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so autoscheduler=Adams2019
 
 $(foreach type,${TYPE_LIST},${PROG}_${type}.a): ${PROG}_gen.exec
 $(foreach type,${TYPE_LIST},${PROG}_${type}.h): ${PROG}_gen.exec

@@ -22,11 +22,11 @@ public:
     void generate() {
         dst = gaussian<T>(src, width, height, depth,
                           window_width, window_height, sigma,
-                          this->auto_schedule);
+                          this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             sigma.set_estimate(1.0f);
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});

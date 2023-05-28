@@ -16,11 +16,12 @@ public:
     GeneratorOutput<Buffer<>> dst{"dst", {UInt(32), UInt(32)}, 2};
 
     void generate() {
-        dst = label_firstpass<T>(src, width, height, this->auto_schedule);
+        dst = label_firstpass<T>(src, width, height,
+                                 this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}});
             for (auto &buffer : static_cast<Func>(dst).output_buffers()) {
                 buffer.set_estimates({{0, 1024}, {0, 768}});

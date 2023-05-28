@@ -24,12 +24,12 @@ public:
 
     void generate() {
         dst = scale_NN<T>(src, in_width, in_height, out_width, out_height,
-                          depth, this->auto_schedule);
+                          depth, this->using_autoscheduler());
     }
 
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, 500}, {0, 500}, {0, 3}});
         } else {

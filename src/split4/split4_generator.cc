@@ -21,7 +21,7 @@ public:
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 4}});
             for (auto &buffer : static_cast<Func>(dst).output_buffers()) {
                 buffer.set_estimates({{0, 1024}, {0, 768}});

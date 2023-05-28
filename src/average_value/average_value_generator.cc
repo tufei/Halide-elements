@@ -18,11 +18,12 @@ public:
     GeneratorOutput<Buffer<D>> dst{"dst", 2};
 
     void generate() {
-        dst = average_value<S, D>(src, roi, width, height, this->auto_schedule);
+        dst = average_value<S, D>(src, roi, width, height,
+                                  this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             roi.set_estimates({{0, 1024}, {0, 768}});
             dst.set_estimates({{0, 1}, {0, 3}});

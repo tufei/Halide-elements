@@ -18,11 +18,11 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = max<T>(src0, src1, this->auto_schedule);
+        dst = max<T>(src0, src1, this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src0.set_estimates({{0,1024}, {0, 768}, {0, 3}});
             src1.set_estimates({{0,1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0,1024}, {0, 768}, {0, 3}});

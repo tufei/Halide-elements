@@ -18,11 +18,12 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = merge3<T>(src0, src1, src2, width, height, this->auto_schedule);
+        dst = merge3<T>(src0, src1, src2, width, height,
+                        this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src0.set_estimates({{0, 1024}, {0, 768}});
             src1.set_estimates({{0, 1024}, {0, 768}});
             src2.set_estimates({{0, 1024}, {0, 768}});

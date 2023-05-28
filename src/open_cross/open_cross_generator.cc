@@ -21,16 +21,17 @@ public:
     GeneratorOutput<Buffer<T>> dilated{"dilated", 3};
 
     void generate() {
+        const auto auto_schedule = this->using_autoscheduler();
         eroded = erode_cross<T>(src, width, height, depth,
                                 window_width, window_height,
-                                iteration, this->auto_schedule);
+                                iteration, auto_schedule);
         dilated = dilate_cross<T>(eroded, width, height, depth,
                                   window_width, window_height,
-                                  iteration, this->auto_schedule);
+                                  iteration, auto_schedule);
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dilated.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
         } else {

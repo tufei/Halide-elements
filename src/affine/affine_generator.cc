@@ -111,7 +111,7 @@ public:
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             input.set_estimates({{0, 768}, {0, 1280}, {0, 3}});
             degrees.set_estimate(0.0f);
             scale_x.set_estimate(1.0f);

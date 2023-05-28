@@ -19,11 +19,11 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = mul_scalar<T>(src, value, this->auto_schedule);
+        dst = mul_scalar<T>(src, value, this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             value.set_estimates({{0, 3}});
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});

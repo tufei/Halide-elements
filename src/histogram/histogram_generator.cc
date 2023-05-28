@@ -21,11 +21,11 @@ public:
 
     void generate() {
         dst = histogram<T>(src, width, height, depth, hist_width,
-                           this->auto_schedule);
+                           this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, std::numeric_limits<T>::max()}, {0, 3}});
         } else {

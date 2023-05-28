@@ -55,6 +55,7 @@ public:
     GeneratorOutput<Buffer<float>> tof{"tof", 2};
 
     void generate() {
+        const auto auto_schedule = using_autoscheduler();
         input_shape[3] = batch_size;
 
         Buffer<> c11w(load_bin<int32_t>("./data/conv1_1_weight.bin", &c11w_shape));
@@ -283,7 +284,7 @@ public:
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             in.set_estimates({{0, 3}, {0, 32}, {0, 32}, {0, 1}});
             tof.set_estimates({{0, 10}, {0, 1}});
         } else {

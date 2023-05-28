@@ -26,7 +26,7 @@ public:
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
         } else {

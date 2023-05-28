@@ -22,16 +22,17 @@ public:
     GeneratorOutput<Buffer<T>> eroded{"eroded", 3};
 
     void generate() {
+        const auto auto_schedule = this->using_autoscheduler();
         dilated = dilate<T>(input, width, height, depth,
                             window_width, window_height,
-                            structure, iteration, this->auto_schedule);
+                            structure, iteration, auto_schedule);
         eroded = erode<T>(dilated, width, height, depth,
                           window_width, window_height,
-                          structure, iteration, this->auto_schedule);
+                          structure, iteration, auto_schedule);
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             structure.set_estimates({{0, 3}, {0, 3}});
             eroded.set_estimates({{0, 1024}, {0, 768}, {0, 3}});

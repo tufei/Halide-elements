@@ -46,7 +46,7 @@ public:
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             in.set_estimates({{0, 3280}, {0, 2486}});
             optical_black_value.set_estimate(0);
             gamma_value.set_estimate(1.f);

@@ -17,11 +17,12 @@ public:
     GeneratorOutput<Buffer<T>> dst{"dst", 3};
 
     void generate() {
-        dst = laplacian<T>(src, width, height, depth, this->auto_schedule);
+        dst = laplacian<T>(src, width, height, depth,
+                           this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 8}, {0, 8}, {0, 3}});
             dst.set_estimates({{0, 8}, {0, 8}, {0, 3}});
         } else {

@@ -353,11 +353,12 @@ public:
         // Softmax
         //Func prob("prob");
         prob(i, n) =
-            softmax(tof, tof_top_shape, prob_top_shape, false, auto_schedule)(i, n);
+            softmax(tof, tof_top_shape, prob_top_shape, false,
+                    using_autoscheduler())(i, n);
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             in.set_estimates({{0, input_shape[0]},
                               {0, input_shape[1]},
                               {0, input_shape[2]},

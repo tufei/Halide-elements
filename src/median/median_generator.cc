@@ -20,11 +20,12 @@ public:
 
     void generate() {
         dst = median<T>(src, width, height, depth,
-                        window_width, window_height, this->auto_schedule);
+                        window_width, window_height,
+                        this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
         } else {

@@ -27,7 +27,7 @@ public:
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             origin_x.set_estimate(1);
             origin_y.set_estimate(1);

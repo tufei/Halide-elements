@@ -27,7 +27,7 @@ public:
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src0.set_estimates({{0, 256}, {0, 192}, {0, 3}});
             src1.set_estimates({{0, 16}, {0, 16}});
             dst.set_estimates({{0, 256}, {0, 192}, {0, 3}});

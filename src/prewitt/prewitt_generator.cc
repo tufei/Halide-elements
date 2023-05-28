@@ -18,11 +18,12 @@ public:
     GeneratorOutput<Buffer<T>> output{"output", 3};
 
     void generate() {
-        output = prewitt<T>(input, width, height, depth, this->auto_schedule);
+        output = prewitt<T>(input, width, height, depth,
+                            this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             output.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
         } else {

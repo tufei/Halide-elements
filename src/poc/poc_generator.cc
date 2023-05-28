@@ -53,6 +53,7 @@ public:
     }
 
     void generate() {
+        const auto auto_schedule = using_autoscheduler();
         n = static_cast<int32_t>(n_);
 
         Expr w = sqrt((x / (float)n - 0.5f) * (x / (float)n - 0.5f) +
@@ -75,7 +76,7 @@ public:
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             input1.set_estimates({{0, n}, {0, n}});
             input2.set_estimates({{0, n}, {0, n}});
             func_poc.set_estimates({{0, n}, {0, n}});

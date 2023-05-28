@@ -20,11 +20,11 @@ public:
 
     void generate() {
         dst = merge4<T>(src0, src1, src2, src3,
-                        width, height, this->auto_schedule);
+                        width, height, this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src0.set_estimates({{0, 1024}, {0, 768}});
             src1.set_estimates({{0, 1024}, {0, 768}});
             src2.set_estimates({{0, 1024}, {0, 768}});

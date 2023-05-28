@@ -21,21 +21,22 @@ public:
   GeneratorOutput<Buffer<T>> erode_rected{"erode_rected", 3};
 
   void generate() {
+    const auto auto_schedule = this->using_autoscheduler();
     // Run dilate
     dilate_rected =
         dilate_rect<T>(input, width, height, depth,
                        window_width, window_height,
-                       iteration, this->auto_schedule);
+                       iteration, auto_schedule);
 
     // Run erode
     erode_rected =
         erode_rect<T>(dilate_rected, width, height, depth,
                       window_width, window_height,
-                      iteration, this->auto_schedule);
+                      iteration, auto_schedule);
   }
 
   void schedule() {
-      if (this->auto_schedule) {
+      if (this->using_autoscheduler()) {
           input.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
           erode_rected.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
       } else {

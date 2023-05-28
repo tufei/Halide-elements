@@ -24,11 +24,11 @@ public:
 
     void generate() {
         dst = histogram2d<T>(src0, src1, width, height, hist_width,
-                             this->auto_schedule);
+                             this->using_autoscheduler());
     }
 
     void schedule() {
-        if (this->auto_schedule) {
+        if (this->using_autoscheduler()) {
             src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             src1.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             dst.set_estimates({{0, 256}, {0, 256}, {0, 3}});

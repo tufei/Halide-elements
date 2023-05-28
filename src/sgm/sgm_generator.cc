@@ -18,11 +18,11 @@ public:
     void generate()
     {
         dst = semi_global_matching(in_l, in_r, width, height,
-                                   disp, auto_schedule);
+                                   disp, using_autoscheduler());
     }
 
     void schedule() {
-        if (auto_schedule) {
+        if (using_autoscheduler()) {
             in_l.set_estimates({{0, 641}, {0, 555}});
             in_r.set_estimates({{0, 641}, {0, 555}});
             dst.set_estimates({{0, 641}, {0, 555}});
