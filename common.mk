@@ -12,6 +12,7 @@ HALIDE_ROOT?=/usr/local/
 HALIDE_BUILD?=${HALIDE_ROOT}
 
 AUTO_SCHEDULE?=false
+AUTO_SCHEDULER?=Adams2019
 
 HALIDE_TOOLS_DIR=${HALIDE_ROOT}/tools
 HALIDE_LIB_CMAKE:=${HALIDE_BUILD}/lib64
@@ -54,7 +55,7 @@ ifeq ($(OS), Linux)
 ifeq ($(AUTO_SCHEDULE), false)
 	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host;)
 else
-	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host -p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so autoscheduler=Adams2019;)
+	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER};)
 endif
 else
 	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host;)
@@ -64,7 +65,7 @@ ifeq ($(OS), Linux)
 ifeq ($(AUTO_SCHEDULE), false)
 	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host
 else
-	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host -p ${HALIDE_LIB_DIR}/libautoschedule_adams2019.so autoscheduler=Adams2019
+	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER}
 endif
 else
 	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host
