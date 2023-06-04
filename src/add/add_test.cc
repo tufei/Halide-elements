@@ -28,7 +28,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
         constexpr int width{1024};
         constexpr int height{768};
         constexpr int depth{3};
-        const std::vector<int> extents{width, height, depth};
+        constexpr std::vector<int> extents{width, height, depth};
         auto input0 = mk_rand_buffer<T>(extents);
         auto input1 = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
@@ -39,7 +39,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
         const auto &result = benchmark([&]() {
             func(input0, input1, output);
             output.device_sync(); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        fmt::print("Execution time: {}\n", double(result) * 1e3);
 
         output.copy_to_host();
 
