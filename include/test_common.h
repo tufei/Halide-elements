@@ -9,8 +9,11 @@
 #include <string>
 #include <vector>
 
+#include <fmt/core.h>
+
 #include "HalideBuffer.h"
 #include "HalideRuntime.h"
+#include "HalideRuntimeCuda.h"
 
 #include "Element/Util.h"
 
@@ -202,6 +205,25 @@ T round_to_nearest_even(double v)
     } else {
         return static_cast<T>(round(v));
     }
+}
+
+static inline int check_cuda_device()
+{
+    const auto *interface = halide_cuda_device_interface();
+    assert(interface->compute_capability != nullptr);
+
+    int major{}, minor{};
+    int err = interface->compute_capability(nullptr, &major, &minor);
+    assert(err == 0);
+
+    int ver = major * 10 + minor;
+    if (ver < 61) {
+        fmt::print("[SKIP] This system supports only CUDA compute capability "
+                   "{}.{}, but compute capability 6.1+ is required.\n",
+                   major, minor);
+        return -1;
+    }
+    return 0;
 }
 
 } //anonymous namespace

@@ -13,6 +13,7 @@ HALIDE_BUILD?=${HALIDE_ROOT}
 
 AUTO_SCHEDULE?=false
 AUTO_SCHEDULER?=Adams2019
+TARGET?=host
 
 HALIDE_TOOLS_DIR=${HALIDE_ROOT}/tools
 HALIDE_LIB_CMAKE:=${HALIDE_BUILD}/lib64
@@ -42,6 +43,10 @@ CXXFLAGS:=-O2 -g -ggdb -std=c++20 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/too
 CSIM_CXXFLAGS:=-O2 -g -ggdb -std=c++20 -I${HALIDE_BUILD}/include -I${HALIDE_ROOT}/tools -L${HALIDE_LIB_DIR} -I../../include
 LIBS:=-ldl -lpthread -lz
 
+ifneq (, $(findstring cuda,${TARGET}))
+CXXFLAGS+=-DUSE_CUDA
+endif
+
 .PHONY: clean
 
 all: ${PROG}_test
@@ -53,22 +58,22 @@ ${PROG}_gen.exec: ${PROG}_gen
 ifdef TYPE_LIST
 ifeq ($(OS), Linux)
 ifeq ($(AUTO_SCHEDULE), false)
-	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host;)
+	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=${TARGET};)
 else
-	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER};)
+	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=${TARGET} -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER};)
 endif
 else
-	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=host;)
+	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=${TARGET};)
 endif
 else
 ifeq ($(OS), Linux)
 ifeq ($(AUTO_SCHEDULE), false)
-	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host
+	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=${TARGET}
 else
-	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER}
+	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=${TARGET} -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER}
 endif
 else
-	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=host
+	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=${TARGET}
 endif
 endif
 	@touch ${PROG}_gen.exec
@@ -79,14 +84,14 @@ $(foreach type,${TYPE_LIST},${PROG}_${type}.a): ${PROG}_gen.exec
 $(foreach type,${TYPE_LIST},${PROG}_${type}.h): ${PROG}_gen.exec
 
 ${PROG}_test: ${PROG}_test.cc $(foreach type,${TYPE_LIST},${PROG}_${type}.h ${PROG}_${type}.a)
-	g++ $(foreach type,${TYPE_LIST},-DTYPE_${type}) -I . ${CXXFLAGS} $< -o $@ $(foreach type,${TYPE_LIST},${PROG}_${type}.a) -ldl -lpthread
+	g++ $(foreach type,${TYPE_LIST},-DTYPE_${type}) -I . ${CXXFLAGS} $< -o $@ $(foreach type,${TYPE_LIST},${PROG}_${type}.a) -ldl -lpthread -lfmt
 else
 ${PROG}.a: ${PROG}_gen.exec
 
 ${PROG}.h: ${PROG}_gen.exec
 
 ${PROG}_test: ${PROG}_test.cc ${PROG}.h ${PROG}.a
-	g++ -I . ${CXXFLAGS} $< -o $@ ${PROG}.a -ldl -lpthread
+	g++ -I . ${CXXFLAGS} $< -o $@ ${PROG}.a -ldl -lpthread -lfmt
 endif
 
 test: ${PROG}_test
