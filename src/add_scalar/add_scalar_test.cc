@@ -36,7 +36,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
         const auto &result = benchmark([&]() {
             func(input, value, output);
             output.device_sync(); });
-        fmt::print("Execution time: {}\n", double(result) * 1e3);
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
 
         output.copy_to_host();
 
@@ -54,7 +54,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
                     if (abs(expect - actual) > 1.) {
                         const auto s =
                             fmt::format("Error: expect({}, {}, {}) = {}, "
-                                        "actual({}, {}, {}) = {}",
+                                        "actual({}, {}, {}) = {}\n",
                                         x, y, c, expect, x, y, c, actual);
                         throw std::runtime_error(s);
                     }
@@ -62,7 +62,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << '\n';
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
