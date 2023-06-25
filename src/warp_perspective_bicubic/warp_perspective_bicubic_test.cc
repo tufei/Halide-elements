@@ -1,36 +1,37 @@
+#include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <iostream>
-#include <string>
-#include <exception>
 #include <climits>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
+#include "halide_benchmark.h"
 
 #include "warp_perspective_bicubic_u8.h"
 #include "warp_perspective_bicubic_u16.h"
 
 #include "test_common.h"
-#include "halide_benchmark.h"
 
 using namespace Halide::Tools;
 
-#define BORDER_INTERPOLATE(x, l) (x < 0 ? 0 : (x >= l ? l - 1 : x))
+void getCubicKernel(float n, std::array<float, 4>& w)
+{
+    static constexpr float a = -0.75f;
 
-void getCubicKernel(float n, float w[4]){
-    static const float a = -0.75f;
-    w[0] = ((a*(n+1.0f)-5.0f*a)*(n+1.0f)+8.0f*a)*(n+1.0f)-4.0f*a;
-    w[1] = ((a+2.0f)*n-(a+3.0f))*n*n+1.0f;
-    w[2] = ((a+2.0f)*(1.0f-n)-(a+3.0f))*(1.0f-n)*(1.0f-n)+1.0f;
-    w[3] = 1.0f-w[2]-w[1]-w[0];
+    w[0] = ((a * (n + 1.0f) - 5.0f * a) * (n + 1.0f) + 8.0f * a) *
+           (n + 1.0f) -4.0f * a;
+    w[1] = ((a + 2.0f) * n - (a + 3.0f)) * n * n + 1.0f;
+    w[2] = ((a + 2.0f) * (1.0f - n) - (a + 3.0f)) *
+           (1.0f - n) * (1.0f - n) + 1.0f;
+    w[3] = 1.0f - w[2] - w[1] - w[0];
 }
 
 template<typename T>
-T interpolateBC(const Halide::Runtime::Buffer<T>& data, const int width, const int height,
-                float x, float y, const int channel, T border_value, const int border_type)
+T interpolateBC(const Halide::Runtime::Buffer<T>& data,
+                const int width, const int height, float x, float y,
+                const int channel, T border_value, const int border_type)
 {
-    if(x != x){x=0;}
-    if(y != y){y=0;}
+    if (x != x) x = 0;
+    if (y != y) y = 0;
     x -= 0.5f;
     y -= 0.5f;
 
@@ -40,21 +41,21 @@ T interpolateBC(const Halide::Runtime::Buffer<T>& data, const int width, const i
     xf = xf - (xf > x - 1);
     yf = yf - (yf > y - 1);
 
-    float d[4][4];
+    std::array<std::array<float, 4>, 4> d;
     if (xf >= 0 && yf >= 0 && xf < width - 3 && yf < height - 3) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                d[i][j] = data(xf+j, yf+i, channel);
+                d[i][j] = data(xf + j, yf + i, channel);
             }
         }
-    }else{
+    } else {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                if (xf >= -j && yf >= -i && xf < width-j && yf < height-i) {
-                    d[i][j] = data(xf+j, yf+i, channel);
+                if (xf >= -j && yf >= -i && xf < width - j && yf < height - i) {
+                    d[i][j] = data(xf + j, yf + i, channel);
                 } else if (border_type == 1) {
-                    int xfj = BORDER_INTERPOLATE(xf + j, width);
-                    int yfi = BORDER_INTERPOLATE(yf + i, height);
+                    int xfj = std::clamp(xf + j, 0, width - 1);
+                    int yfi = std::clamp(yf + i, 0, height - 1);
                     d[i][j] = data(xfj, yfi, channel);
                 } else {
                     assert(border_type == 0);
@@ -64,25 +65,24 @@ T interpolateBC(const Halide::Runtime::Buffer<T>& data, const int width, const i
         }
     }
 
-    float dx = (std::min)((std::max)(0.0f, x - xf - 1.0f), 1.0f);
-    float dy = (std::min)((std::max)(0.0f, y - yf - 1.0f), 1.0f);
-
-    float w[4];
+    std::array<float, 4> w{};
+    const float dx = std::clamp(x - xf - 1.f, 0.f, 1.f);
     getCubicKernel(dx, w);
 
-    float col[4];
+    std::array<float, 4> col{};
     for (int i = 0; i < 4; i++) {
-        col[i] = (d[i][0] * w[0] + d[i][1] * w[1])
-                    + (d[i][2] * w[2] + d[i][3] * w[3]);
+        col[i] = (d[i][0] * w[0] + d[i][1] * w[1]) +
+                 (d[i][2] * w[2] + d[i][3] * w[3]);
     }
 
+    const float dy = std::clamp(y - yf - 1.f, 0.f, 1.f);
     getCubicKernel(dy, w);
-    float value = (col[0] * w[0] + col[1] * w[1])
-                    + (col[2] * w[2] + col[3] * w[3]);
+    float value = (col[0] * w[0] + col[1] * w[1]) +
+                  (col[2] * w[2] + col[3] * w[3]) + 0.5f;
 
     T min = (std::numeric_limits<T>::min)();
     T max = (std::numeric_limits<T>::max)();
-    return static_cast<T>(value < min ? min : value > max ? max: value + 0.5f);
+    return static_cast<T>(std::clamp<float>(value, min, max));
 }
 
 
@@ -142,12 +142,18 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
+        input.set_host_dirty();
+
         const auto &result = benchmark([&]() {
-            func(input, border_value, transform, output); });
+            func(input, border_value, transform, output);
+            output.device_sync(); });
+
         std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
 
         auto expect = mk_null_buffer<T>(extents);
         expect = BC_ref(expect, input, width, height, depth, border_value, border_type, transform);
+
+        output.copy_to_host();
 
         for (int c=0; c<depth; ++c) {
             //for each x and y
@@ -169,7 +175,13 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
     return 0;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
 #ifdef TYPE_u8
     test<uint8_t>(warp_perspective_bicubic_u8);
 #endif
@@ -177,4 +189,6 @@ int main(int argc, char **argv) {
     test<uint16_t>(warp_perspective_bicubic_u16);
 #endif
 
+    return 0;
 }
+
