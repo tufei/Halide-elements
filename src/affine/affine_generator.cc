@@ -99,15 +99,19 @@ public:
         //   where Y = (x,y) and X = (tx, ty).
         //
         Func tx("tx"), ty("ty");
-        tx(x, y) = cast<int>((a00*x + a10*y + a20) / det);
-        ty(x, y) = cast<int>((a01*x + a11*y + a21) / det);
+        tx(x, y) = clamp(cast<int>((a00 * x + a10 * y + a20) / det), 0, width - 1);
+        ty(x, y) = clamp(cast<int>((a01 * x + a11 * y + a21) / det), 0, height - 1);
 
+#if 1
+        affine(x, y, c) = input(tx(x, y), ty(x, y), c);
+#else
         // CAUTION: the coordinates of the input image cannot be out of the original width and height.
         //          so they are limited and the outside is set to 255 which is a white color.
         //
-        Func limited = BoundaryConditions::constant_exterior(input, 255, 0, width, 0, height, 0, depth);
+        Func limited = BoundaryConditions::constant_exterior(input, 255, {{0, width}, {0, height}, {0, depth}});
 
         affine(x, y, c) = limited(tx(x, y), ty(x, y), c);
+#endif
     }
 
     void schedule() {

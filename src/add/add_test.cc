@@ -28,7 +28,7 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
         constexpr int width{1024};
         constexpr int height{768};
         constexpr int depth{3};
-        constexpr std::vector<int> extents{width, height, depth};
+        const std::vector<int> extents{width, height, depth};
         auto input0 = mk_rand_buffer<T>(extents);
         auto input1 = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);

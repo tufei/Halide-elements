@@ -1,5 +1,7 @@
 PROG:=affine
-AUTO_SCHEDULE:=false
+AUTO_SCHEDULE:=true
+AUTO_SCHEDULER:=Anderson2021
+TARGET:=host-cuda
 include ../../common.mk
 
 ${PROG}_test2: ${PROG}_test2.cc ${PROG}.h ${PROG}.a

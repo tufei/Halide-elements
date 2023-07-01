@@ -1,19 +1,19 @@
 #include <cstdlib>
 #include <iostream>
-#include <string>
-#include <exception>
 
 #include "affine.h"
 #include "test_common.h"
 #include "halide_benchmark.h"
 
-using std::string;
-using std::vector;
-
 using namespace Halide::Tools;
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
     try {
         int ret = 0;
 
@@ -23,7 +23,7 @@ int main()
         const int depth = 3;
         const int width = 768;
         const int height = 1280;
-        const std::vector<int32_t> extents{width, height, depth};
+        const std::vector<int> extents{width, height, depth};
         auto input = mk_rand_buffer<uint8_t>(extents);
         auto output = mk_null_buffer<uint8_t>(extents);
 
@@ -34,10 +34,16 @@ int main()
         float shift_y = 200.0f;
         float skew_y = 30.0f;
 
+        input.set_host_dirty();
+
         const auto &result = benchmark([&]() {
             affine(input, degrees, scale_x, scale_y,
-                   shift_x, shift_y, skew_y, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+                   shift_x, shift_y, skew_y, output);
+            output.device_sync(); });
+
+        fmt::print("Execution time: {}ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         // operations are applied in the following order:
         //   1. scale about the origin
@@ -56,30 +62,33 @@ int main()
         float a11 =   scale_x * (cos_deg - sin_deg * tan_skew_y);
         float a21 = - (a01 * shift_x + a11 * shift_y);
 
-        for (int c=0; c<depth; ++c) {
-            for (int y=shift_y; y<height; ++y) {
-                for (int x=shift_x; x<width; ++x) {
-                    int tx = static_cast<int>((a00*x + a10*y + a20) / det);
-                    int ty = static_cast<int>((a01*x + a11*y + a21) / det);
+        for (int c = 0; c < depth; ++c) {
+            for (int y = shift_y; y < height; ++y) {
+                for (int x = shift_x; x < width; ++x) {
+                    int tx = static_cast<int>((a00 * x + a10 * y + a20) / det);
+                    int ty = static_cast<int>((a01 * x + a11 * y + a21) / det);
 
                     uint8_t expect = 255;
                     if (tx >= 0 && tx < width && ty >= 0 && ty < height)
                         expect = input(tx, ty, c);
                     uint8_t actual = output(x, y, c);
                     if (expect != actual) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
-                                                        x, y, c, static_cast<uint64_t>(expect),
-                                                        x, y, c, static_cast<uint64_t>(actual)).c_str());
+                        const auto s =
+                            fmt::format("Error: expect({}, {}, {}) = {}, "
+                                        "actual({}, {}, {}) = {}\n",
+                                        x, y, c, static_cast<uint64_t>(expect),
+                                        x, y, c, static_cast<uint64_t>(actual));
+                        throw std::runtime_error(s);
                     }
                 }
             }
         }
 
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
