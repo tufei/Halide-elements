@@ -1,13 +1,7 @@
 #include <algorithm>
-#include <cstdlib>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <string>
-#include <vector>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
 #include "halide_benchmark.h"
 
 #include "test_common.h"
@@ -20,7 +14,7 @@ using namespace Halide::Tools;
 namespace {
 
 template<typename Type>
-Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
+Buffer<Type> load_data(const std::string& fname)
 {
     std::ifstream ifs(fname.c_str(), std::ios_base::binary);
     if (!ifs.is_open()) {
@@ -38,7 +32,7 @@ Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
         extents[i] = static_cast<int>(e);
     }
 
-    Halide::Runtime::Buffer<Type> buffer(extents);
+    Buffer<Type> buffer(extents);
 
     // remaing size
     ifs.seekg(0, std::ifstream::end);
@@ -166,70 +160,75 @@ void classify(const Buffer<float>& probs, int class_num, int batch_size, const s
 }
 
 int main(int argc, char **argv) {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
     try {
-        Buffer<int32_t> in = load_data<int32_t>("data/image_n03207743.bin");
+        Buffer<int> in = load_data<int>("data/image_n03207743.bin");
 
-        Buffer<int32_t> c1w = load_data<int32_t>("data/conv1_weight.bin");
-        Buffer<int32_t> c1b = load_data<int32_t>("data/conv1_bias.bin");
-        Buffer<int32_t> bn1m = load_data<int32_t>("data/bn1_mean.bin");
-        Buffer<int32_t> bn1v = load_data<int32_t>("data/bn1_variance.bin");
-        Buffer<int32_t> s1w = load_data<int32_t>("data/scale1_weight.bin");
-        Buffer<int32_t> s1b = load_data<int32_t>("data/scale1_bias.bin");
+        Buffer<int> c1w = load_data<int>("data/conv1_weight.bin");
+        Buffer<int> c1b = load_data<int>("data/conv1_bias.bin");
+        Buffer<int> bn1m = load_data<int>("data/bn1_mean.bin");
+        Buffer<int> bn1v = load_data<int>("data/bn1_variance.bin");
+        Buffer<int> s1w = load_data<int>("data/scale1_weight.bin");
+        Buffer<int> s1b = load_data<int>("data/scale1_bias.bin");
 
-        Buffer<int32_t> bn2m = load_data<int32_t>("data/bn2_mean.bin");
-        Buffer<int32_t> bn2v = load_data<int32_t>("data/bn2_variance.bin");
-        Buffer<int32_t> s2w = load_data<int32_t>("data/scale2_weight.bin");
-        Buffer<int32_t> s2b = load_data<int32_t>("data/scale2_bias.bin");
+        Buffer<int> bn2m = load_data<int>("data/bn2_mean.bin");
+        Buffer<int> bn2v = load_data<int>("data/bn2_variance.bin");
+        Buffer<int> s2w = load_data<int>("data/scale2_weight.bin");
+        Buffer<int> s2b = load_data<int>("data/scale2_bias.bin");
         Buffer<bool> c2w = load_data<bool>("data/conv2_weight.bin");
-        Buffer<int32_t> c2a = load_data<int32_t>("data/conv2_alpha.bin");
-        Buffer<int32_t> c2b = load_data<int32_t>("data/conv2_bias.bin");
+        Buffer<int> c2a = load_data<int>("data/conv2_alpha.bin");
+        Buffer<int> c2b = load_data<int>("data/conv2_bias.bin");
 
-        Buffer<int32_t> bn3m = load_data<int32_t>("data/bn3_mean.bin");
-        Buffer<int32_t> bn3v = load_data<int32_t>("data/bn3_variance.bin");
-        Buffer<int32_t> s3w = load_data<int32_t>("data/scale3_weight.bin");
-        Buffer<int32_t> s3b = load_data<int32_t>("data/scale3_bias.bin");
+        Buffer<int> bn3m = load_data<int>("data/bn3_mean.bin");
+        Buffer<int> bn3v = load_data<int>("data/bn3_variance.bin");
+        Buffer<int> s3w = load_data<int>("data/scale3_weight.bin");
+        Buffer<int> s3b = load_data<int>("data/scale3_bias.bin");
         Buffer<bool> c3w = load_data<bool>("data/conv3_weight.bin");
-        Buffer<int32_t> c3a = load_data<int32_t>("data/conv3_alpha.bin");
-        Buffer<int32_t> c3b = load_data<int32_t>("data/conv3_bias.bin");
+        Buffer<int> c3a = load_data<int>("data/conv3_alpha.bin");
+        Buffer<int> c3b = load_data<int>("data/conv3_bias.bin");
 
-        Buffer<int32_t> bn4m = load_data<int32_t>("data/bn4_mean.bin");
-        Buffer<int32_t> bn4v = load_data<int32_t>("data/bn4_variance.bin");
-        Buffer<int32_t> s4w = load_data<int32_t>("data/scale4_weight.bin");
-        Buffer<int32_t> s4b = load_data<int32_t>("data/scale4_bias.bin");
+        Buffer<int> bn4m = load_data<int>("data/bn4_mean.bin");
+        Buffer<int> bn4v = load_data<int>("data/bn4_variance.bin");
+        Buffer<int> s4w = load_data<int>("data/scale4_weight.bin");
+        Buffer<int> s4b = load_data<int>("data/scale4_bias.bin");
         Buffer<bool> c4w = load_data<bool>("data/conv4_weight.bin");
-        Buffer<int32_t> c4a = load_data<int32_t>("data/conv4_alpha.bin");
-        Buffer<int32_t> c4b = load_data<int32_t>("data/conv4_bias.bin");
+        Buffer<int> c4a = load_data<int>("data/conv4_alpha.bin");
+        Buffer<int> c4b = load_data<int>("data/conv4_bias.bin");
 
-        Buffer<int32_t> bn5m = load_data<int32_t>("data/bn5_mean.bin");
-        Buffer<int32_t> bn5v = load_data<int32_t>("data/bn5_variance.bin");
-        Buffer<int32_t> s5w = load_data<int32_t>("data/scale5_weight.bin");
-        Buffer<int32_t> s5b = load_data<int32_t>("data/scale5_bias.bin");
+        Buffer<int> bn5m = load_data<int>("data/bn5_mean.bin");
+        Buffer<int> bn5v = load_data<int>("data/bn5_variance.bin");
+        Buffer<int> s5w = load_data<int>("data/scale5_weight.bin");
+        Buffer<int> s5b = load_data<int>("data/scale5_bias.bin");
         Buffer<bool> c5w = load_data<bool>("data/conv5_weight.bin");
-        Buffer<int32_t> c5a = load_data<int32_t>("data/conv5_alpha.bin");
-        Buffer<int32_t> c5b = load_data<int32_t>("data/conv5_bias.bin");
+        Buffer<int> c5a = load_data<int>("data/conv5_alpha.bin");
+        Buffer<int> c5b = load_data<int>("data/conv5_bias.bin");
 
-        Buffer<int32_t> bn6m = load_data<int32_t>("data/bn6_mean.bin");
-        Buffer<int32_t> bn6v = load_data<int32_t>("data/bn6_variance.bin");
-        Buffer<int32_t> s6w = load_data<int32_t>("data/scale6_weight.bin");
-        Buffer<int32_t> s6b = load_data<int32_t>("data/scale6_bias.bin");
+        Buffer<int> bn6m = load_data<int>("data/bn6_mean.bin");
+        Buffer<int> bn6v = load_data<int>("data/bn6_variance.bin");
+        Buffer<int> s6w = load_data<int>("data/scale6_weight.bin");
+        Buffer<int> s6b = load_data<int>("data/scale6_bias.bin");
         Buffer<bool> f6w = load_data<bool>("data/fc6_weight.bin");
-        Buffer<int32_t> f6a = load_data<int32_t>("data/fc6_alpha.bin");
-        Buffer<int32_t> f6b = load_data<int32_t>("data/fc6_bias.bin");
+        Buffer<int> f6a = load_data<int>("data/fc6_alpha.bin");
+        Buffer<int> f6b = load_data<int>("data/fc6_bias.bin");
 
-        Buffer<int32_t> bn7m = load_data<int32_t>("data/bn7_mean.bin");
-        Buffer<int32_t> bn7v = load_data<int32_t>("data/bn7_variance.bin");
-        Buffer<int32_t> s7w = load_data<int32_t>("data/scale7_weight.bin");
-        Buffer<int32_t> s7b = load_data<int32_t>("data/scale7_bias.bin");
+        Buffer<int> bn7m = load_data<int>("data/bn7_mean.bin");
+        Buffer<int> bn7v = load_data<int>("data/bn7_variance.bin");
+        Buffer<int> s7w = load_data<int>("data/scale7_weight.bin");
+        Buffer<int> s7b = load_data<int>("data/scale7_bias.bin");
         Buffer<bool> f7w = load_data<bool>("data/fc7_weight.bin");
-        Buffer<int32_t> f7a = load_data<int32_t>("data/fc7_alpha.bin");
-        Buffer<int32_t> f7b = load_data<int32_t>("data/fc7_bias.bin");
+        Buffer<int> f7a = load_data<int>("data/fc7_alpha.bin");
+        Buffer<int> f7b = load_data<int>("data/fc7_bias.bin");
 
-        Buffer<int32_t> bn8m = load_data<int32_t>("data/bn8_mean.bin");
-        Buffer<int32_t> bn8v = load_data<int32_t>("data/bn8_variance.bin");
-        Buffer<int32_t> s8w = load_data<int32_t>("data/scale8_weight.bin");
-        Buffer<int32_t> s8b = load_data<int32_t>("data/scale8_bias.bin");
-        Buffer<int32_t> f8w = load_data<int32_t>("data/fc8_weight.bin");
-        Buffer<int32_t> f8b = load_data<int32_t>("data/fc8_bias.bin");
+        Buffer<int> bn8m = load_data<int>("data/bn8_mean.bin");
+        Buffer<int> bn8v = load_data<int>("data/bn8_variance.bin");
+        Buffer<int> s8w = load_data<int>("data/scale8_weight.bin");
+        Buffer<int> s8b = load_data<int>("data/scale8_bias.bin");
+        Buffer<int> f8w = load_data<int>("data/fc8_weight.bin");
+        Buffer<int> f8b = load_data<int>("data/fc8_bias.bin");
 
         const int classes = 1000;
         const int batch_size = in.extent(3);
@@ -247,16 +246,16 @@ int main(int argc, char **argv) {
                          bn7m, bn7v, s7w, s7b, f7w, f7a, f7b,
                          bn8m, bn8v, s8w, s8b, f8w, f8b,
                          out); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        fmt::print("Execution time: {}ms\n", double(result) * 1e3);
 
         std::string label_file("data/synset_words.txt");
         classify(out, classes, batch_size, label_file);
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
