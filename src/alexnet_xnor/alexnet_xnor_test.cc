@@ -78,16 +78,17 @@ std::vector<std::string> read_labels(const std::string &label_name)
     std::vector<std::string> labels;
     std::string line;
 
-    while(std::getline(ifs, line)) {
+    while (std::getline(ifs, line)) {
         labels.push_back(line);
     }
 
     return labels;
 }
 
-void classify(const Buffer<float>& probs, int class_num, int batch_size, const std::string &label_file)
+void classify(const Buffer<float>& probs, int class_num, int batch_size,
+              const std::string &label_file)
 {
-    int label_indices[] = {
+    constexpr int label_indices[] = {
         147, 312, 722, 440, 429, 507, 917, 204, 306, 538, 870, 642,  84, 338, 413, 975, 417, 300, 871, 692,
         859, 901, 992, 944, 635, 556, 447, 407, 724, 549, 160, 360, 988, 520, 425, 337, 989, 414, 972, 292,
         141, 913, 104, 868, 256, 443,  92, 744, 746, 961, 791, 463, 721, 347, 884, 339, 905, 481, 927, 241,
@@ -230,10 +231,74 @@ int main(int argc, char **argv) {
         Buffer<int> f8w = load_data<int>("data/fc8_weight.bin");
         Buffer<int> f8b = load_data<int>("data/fc8_bias.bin");
 
-        const int classes = 1000;
+        constexpr int classes = 1000;
         const int batch_size = in.extent(3);
 
         Buffer<float> out(classes, batch_size);
+
+        in.set_host_dirty();
+
+        c1w.set_host_dirty();
+        c1b.set_host_dirty();
+        bn1m.set_host_dirty();
+        bn1v.set_host_dirty();
+        s1w.set_host_dirty();
+        s1b.set_host_dirty();
+
+        bn2m.set_host_dirty();
+        bn2v.set_host_dirty();
+        s2w.set_host_dirty();
+        s2b.set_host_dirty();
+        c2w.set_host_dirty();
+        c2a.set_host_dirty();
+        c2b.set_host_dirty();
+
+        bn3m.set_host_dirty();
+        bn3v.set_host_dirty();
+        s3w.set_host_dirty();
+        s3b.set_host_dirty();
+        c3w.set_host_dirty();
+        c3a.set_host_dirty();
+        c3b.set_host_dirty();
+
+        bn4m.set_host_dirty();
+        bn4v.set_host_dirty();
+        s4w.set_host_dirty();
+        s4b.set_host_dirty();
+        c4w.set_host_dirty();
+        c4a.set_host_dirty();
+        c4b.set_host_dirty();
+
+        bn5m.set_host_dirty();
+        bn5v.set_host_dirty();
+        s5w.set_host_dirty();
+        s5b.set_host_dirty();
+        c5w.set_host_dirty();
+        c5a.set_host_dirty();
+        c5b.set_host_dirty();
+
+        bn6m.set_host_dirty();
+        bn6v.set_host_dirty();
+        s6w.set_host_dirty();
+        s6b.set_host_dirty();
+        f6w.set_host_dirty();
+        f6a.set_host_dirty();
+        f6b.set_host_dirty();
+
+        bn7m.set_host_dirty();
+        bn7v.set_host_dirty();
+        s7w.set_host_dirty();
+        s7b.set_host_dirty();
+        f7w.set_host_dirty();
+        f7a.set_host_dirty();
+        f7b.set_host_dirty();
+
+        bn8m.set_host_dirty();
+        bn8v.set_host_dirty();
+        s8w.set_host_dirty();
+        s8b.set_host_dirty();
+        f8w.set_host_dirty();
+        f8b.set_host_dirty();
 
         const auto &result = benchmark([&]() {
             alexnet_xnor(in,
@@ -245,8 +310,12 @@ int main(int argc, char **argv) {
                          bn6m, bn6v, s6w, s6b, f6w, f6a, f6b,
                          bn7m, bn7v, s7w, s7b, f7w, f7a, f7b,
                          bn8m, bn8v, s8w, s8b, f8w, f8b,
-                         out); });
+                         out);
+            out.device_sync(); });
+
         fmt::print("Execution time: {}ms\n", double(result) * 1e3);
+
+        out.copy_to_host();
 
         std::string label_file("data/synset_words.txt");
         classify(out, classes, batch_size, label_file);
