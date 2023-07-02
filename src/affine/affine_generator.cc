@@ -4,6 +4,7 @@
 #include "Element.h"
 
 using namespace Halide;
+using namespace Halide::BoundaryConditions;
 
 class Affine : public Generator<Affine> {
 public:
@@ -16,9 +17,9 @@ public:
     GeneratorInput<float> shift_y{"shift_y", 0.0f};
     GeneratorInput<float> skew_y{"skew_y", 0.0f};
 
-    GeneratorParam<int32_t> width{"width", 768};
-    GeneratorParam<int32_t> height{"height", 1280};
-    GeneratorParam<int32_t> depth{"depth", 3};
+    GeneratorParam<int> width{"width", 768};
+    GeneratorParam<int> height{"height", 1280};
+    GeneratorParam<int> depth{"depth", 3};
 
     GeneratorOutput<Buffer<uint8_t>> affine{"affine", 3};
 
@@ -85,10 +86,10 @@ public:
         Expr det = scale_x * scale_y;
         Expr a00 = scale_y * cos_deg;
         Expr a10 = scale_y * sin_deg;
-        Expr a20 = - (a00 * shift_x + a10 * shift_y);
-        Expr a01 = - scale_x * (sin_deg + cos_deg * tan_skew_y);
-        Expr a11 =   scale_x * (cos_deg - sin_deg * tan_skew_y);
-        Expr a21 = - (a01 * shift_x + a11 * shift_y);
+        Expr a20 = -(a00 * shift_x + a10 * shift_y);
+        Expr a01 = -scale_x * (sin_deg + cos_deg * tan_skew_y);
+        Expr a11 =  scale_x * (cos_deg - sin_deg * tan_skew_y);
+        Expr a21 = -(a01 * shift_x + a11 * shift_y);
 
         // Here X can be described by Y, A, and b like this.
         //
@@ -98,20 +99,14 @@ public:
         //
         //   where Y = (x,y) and X = (tx, ty).
         //
-        Func tx("tx"), ty("ty");
-        tx(x, y) = clamp(cast<int>((a00 * x + a10 * y + a20) / det), 0, width - 1);
-        ty(x, y) = clamp(cast<int>((a01 * x + a11 * y + a21) / det), 0, height - 1);
+        Func tx{"tx"}, ty{"ty"};
 
-#if 1
-        affine(x, y, c) = input(tx(x, y), ty(x, y), c);
-#else
-        // CAUTION: the coordinates of the input image cannot be out of the original width and height.
-        //          so they are limited and the outside is set to 255 which is a white color.
-        //
-        Func limited = BoundaryConditions::constant_exterior(input, 255, {{0, width}, {0, height}, {0, depth}});
+        tx(x, y) = clamp(cast<int>((a00 * x + a10 * y + a20) / det), -1, width);
+        ty(x, y) = clamp(cast<int>((a01 * x + a11 * y + a21) / det), -1, height);
+
+        Func limited = constant_exterior(input, 255, {{0, width}, {0, height}, {0, depth}});
 
         affine(x, y, c) = limited(tx(x, y), ty(x, y), c);
-#endif
     }
 
     void schedule() {
@@ -134,3 +129,4 @@ private:
 };
 
 HALIDE_REGISTER_GENERATOR(Affine, affine);
+
