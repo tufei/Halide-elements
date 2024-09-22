@@ -179,7 +179,7 @@ Tuple argmax_unroll(RDom r, Expr e, const std::string &name = "argmax_unroll") {
 
     f(v.free_vars) = initial_tup;
     Expr better = e > f(v.free_vars)[value_index];
-    Tuple update = tuple_select(better, update_tup, f(v.free_vars));
+    Tuple update = select(better, update_tup, f(v.free_vars));
     f(v.free_vars) = update;
 #if defined(HALIDE_FOR_FPGA)
     for (auto var : v.free_vars) {
@@ -213,7 +213,7 @@ Tuple argmin_unroll(RDom r, Expr e, const std::string &name = "argmin_unroll") {
 
     f(v.free_vars) = initial_tup;
     Expr better = e < f(v.free_vars)[value_index];
-    f(v.free_vars) = tuple_select(better, update_tup, f(v.free_vars));
+    f(v.free_vars) = select(better, update_tup, f(v.free_vars));
 #if defined(HALIDE_FOR_FPGA)
     for (auto var : v.free_vars) {
         f.unroll(var)

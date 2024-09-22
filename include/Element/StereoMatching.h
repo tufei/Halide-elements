@@ -24,7 +24,7 @@ Func disparity(Func cost, int32_t disp, const bool auto_schedule = false)
 
     Func g("argmin");
     g(x, y) = Tuple(0, e.type().max());
-    g(x, y) = tuple_select(e < g(x, y)[1], Tuple(r, e), g(x, y));
+    g(x, y) = select(e < g(x, y)[1], Tuple(r, e), g(x, y));
 
     if (!auto_schedule) {
         g.unroll(x).unroll(y)
