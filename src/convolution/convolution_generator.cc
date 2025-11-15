@@ -1,5 +1,4 @@
 #include <cstdint>
-
 #include <Halide.h>
 #include "Element.h"
 

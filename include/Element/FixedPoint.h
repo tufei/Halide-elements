@@ -16,7 +16,7 @@ namespace {
 Type base_type(uint32_t nb, bool is_signed) {
     // If not used with hls-backend, represent the type by the next uppermost integer type valid in C
 #if !defined(HALIDE_FOR_FPGA)
-    int new_nb;
+    uint32_t new_nb;
     for (new_nb = 8; new_nb < nb; new_nb *= 2);
     nb = new_nb;
 #endif

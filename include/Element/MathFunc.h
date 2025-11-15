@@ -3,7 +3,7 @@
 
 #include "Halide.h"
 #ifndef he_user_assert
-#define he_user_assert(c) _halide_internal_assertion(c, Internal::ErrorReport::User)
+#define he_user_assert(c) _halide_internal_assert(c)
 #endif
 
 namespace Halide {

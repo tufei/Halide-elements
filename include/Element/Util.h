@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cassert>
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <exception>
+#include <stdexcept>
 
 namespace Halide {
 namespace Element {
