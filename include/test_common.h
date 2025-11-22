@@ -217,9 +217,9 @@ static inline int check_cuda_device()
     assert(err == 0);
 
     int ver = major * 10 + minor;
-    if (ver < 61) {
+    if (ver < 75) {
         fmt::print("[SKIP] This system supports only CUDA compute capability "
-                   "{}.{}, but compute capability 6.1+ is required.\n",
+                   "{}.{}, but compute capability 7.5+ is required.\n",
                    major, minor);
         return -1;
     }
