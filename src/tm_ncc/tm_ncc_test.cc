@@ -44,13 +44,13 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer,
                 for (int y = 0; y < img_height; ++y) {
                     for (int x = 0; x < img_width; ++x) {
                         input0(x, y, c) =
-                            static_cast<T>(input0(x, y, c) / 10000000);
+                            static_cast<T>(input0(x, y, c) / 10'000'000);
                     }
                 }
             }
             for (int y = 0; y < tmp_height; ++y) {
                 for (int x = 0; x < tmp_width; ++x) {
-                    input1(x, y) = static_cast<T>(input1(x, y) / 10000000);
+                    input1(x, y) = static_cast<T>(input1(x, y) / 10'000'000);
                 }
             }
         }

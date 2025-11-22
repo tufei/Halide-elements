@@ -30,7 +30,7 @@ public:
         if (this->using_autoscheduler()) {
             src0.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
             src1.set_estimates({{0, 16}, {0, 16}});
-            dst.set_estimates({{0, 1024}, {0, 768}, {0, 3}});
+            dst.set_estimates({{0, (1024 - 16 + 1)}, {0, (768 - 16 + 1)}, {0, 3}});
         } else {
             ::schedule(src0, {img_width, img_height, img_depth});
             ::schedule(src1, {tmp_width, tmp_height});
