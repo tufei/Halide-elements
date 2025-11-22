@@ -58,22 +58,22 @@ ${PROG}_gen.exec: ${PROG}_gen
 ifdef TYPE_LIST
 ifeq ($(OS), Linux)
 ifeq ($(AUTO_SCHEDULE), false)
-	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=${TARGET};)
+	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt_html,conceptual_stmt_html target=${TARGET};)
 else
-	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=${TARGET} -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER};)
+	$(foreach type,${TYPE_LIST},LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt_html,conceptual_stmt_html target=${TARGET} -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER};)
 endif
 else
-	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt target=${TARGET};)
+	$(foreach type,${TYPE_LIST},DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG}_${type} -e h,static_library,stmt_html,conceptual_stmt_html target=${TARGET};)
 endif
 else
 ifeq ($(OS), Linux)
 ifeq ($(AUTO_SCHEDULE), false)
-	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=${TARGET}
+	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt_html,conceptual_stmt_html target=${TARGET}
 else
-	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=${TARGET} -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER}
+	LD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt_html,conceptual_stmt_html target=${TARGET} -p ${HALIDE_LIB_DIR}/libautoschedule_$(shell echo ${AUTO_SCHEDULER} | tr A-Z a-z).so autoscheduler=${AUTO_SCHEDULER}
 endif
 else
-	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt target=${TARGET}
+	DYLD_LIBRARY_PATH=${HALIDE_LIB_DIR} ./$< -o . -g ${PROG} -e h,static_library,stmt_html,conceptual_stmt_html target=${TARGET}
 endif
 endif
 	@touch ${PROG}_gen.exec
@@ -150,4 +150,4 @@ run: ${PROG}_run.c ${PROG}.hls.exec
 	arm-linux-gnueabihf-gcc ${CFLAGS} ${TARGET_SRC} -o $@ ${TARGET_LIB}
 
 clean:
-	rm -rf ${PROG}_gen ${PROG}_test ${PROG}_*test_csim ${PROG}_run ${PROG}*.h ${PROG}*.a ${PROG}*.stmt *.o *.hls *.exec *.dSYM *.ppm *.pgm *.dat
+	rm -rf ${PROG}_gen ${PROG}_test ${PROG}_*test_csim ${PROG}_run ${PROG}*.h ${PROG}*.a ${PROG}*.stmt *.html *.o *.hls *.exec *.dSYM *.ppm *.pgm *.dat
