@@ -3,7 +3,7 @@ color: "#87D981"
 description: Update source files in a subdirectory for building and testing with CUDA
 effort: high
 mode: subagent
-model: ollama/qwen3.6:35b-a3b-128k
+model: ollama/qwen3.8:27b-128k
 temperature: 1.0
 thinking:
   budgetTokens: 131072
