@@ -20,6 +20,8 @@ public:
 
     FindFreeVars(RDom r) : rdom(r) { }
 
+    using IRMutator::mutate;
+
 private:
     Scope<int> internal;
 
