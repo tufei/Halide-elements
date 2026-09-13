@@ -1,6 +1,4 @@
 #include <algorithm>
-#include <iomanip>
-#include <iostream>
 
 #include "halide_benchmark.h"
 
@@ -152,8 +150,7 @@ void classify(const Buffer<float>& probs, int class_num, int batch_size,
         for (auto i = decltype(tops.size())(0); i < tops.size(); ++i) {
             auto index = tops[i];
             auto label_i = label_indices[index];
-            std::cout << std::fixed << std::setprecision(3) << p[index]*100 << ": "
-                      << labels[label_i] << "\n";
+            fmt::print("{:.3f}: {}\n", p[index] * 100, labels[label_i]);
         }
     }
 }

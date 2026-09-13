@@ -32,9 +32,9 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer,
         constexpr int tmp_height{16};
         constexpr int res_width = img_width - tmp_width + 1;
         constexpr int res_height = img_height - tmp_height + 1;
-        const std::vector<int32_t> img_extents{img_width, img_height, img_depth};
-        const std::vector<int32_t> tmp_extents{tmp_width, tmp_height};
-        const std::vector<int32_t> res_extents{res_width, res_height, img_depth};
+        const std::vector<int> img_extents{img_width, img_height, img_depth};
+        const std::vector<int> tmp_extents{tmp_width, tmp_height};
+        const std::vector<int> res_extents{res_width, res_height, img_depth};
         auto input0 = mk_rand_buffer<T>(img_extents);
         auto input1 = mk_rand_buffer<T>(tmp_extents);
         auto output = mk_null_buffer<double>(res_extents);
@@ -59,9 +59,10 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer,
         input1.set_host_dirty();
 
         const auto &result = benchmark([&]() {
-            func(input0, input1, output); });
+            func(input0, input1, output);
+            output.device_sync(); });
 
-        fmt::print("Execution time: {}ms\n", double(result) * 1e3);
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
 
         output.copy_to_host();
 
@@ -94,7 +95,7 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer,
                         const auto s =
                             fmt::format("Error: expect({}, {}, {}) = {}, "
                                         "actual({}, {}, {}) = {}\n",
-                                        x, y, c, expect, x, y, c, actual).c_str();
+                                        x, y, c, expect, x, y, c, actual);
                         throw std::runtime_error(s);
                     }
                 }

@@ -11,6 +11,11 @@ using namespace Halide::Runtime;
 using namespace Halide::Tools;
 
 int main(int argc, char **argv) {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
     try {
         Buffer<uint8_t> in_l = load_pgm("data/left.pgm");
         Buffer<uint8_t> in_r = load_pgm("data/right.pgm");
@@ -27,7 +32,7 @@ int main(int argc, char **argv) {
             sgm(in_l, in_r, out);
             out.device_sync(); });
 
-        fmt::print("Execution time: {}ms\n", double(result) * 1e3);
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
 
         out.copy_to_host();
 

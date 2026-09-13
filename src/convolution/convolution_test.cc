@@ -40,8 +40,9 @@ int main(int argc, char **argv) {
         Buffer<uint8_t> output(width, height, depth);
 
         const auto &result = benchmark([&]() {
-            convolution(input, kernel, 3, output); });
-        fmt::print("Execution time: {}ms\n", double(result) * 1e3);
+            convolution(input, kernel, 3, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
 
         output.copy_to_host();
 
@@ -54,17 +55,17 @@ int main(int argc, char **argv) {
                         const auto s =
                             fmt::format("Error: expect({}, {}, {}) = {}, "
                                         "actual({}, {}, {}) = {}",
-                                        x, y, c, ev, x, y, c, av).c_str();
+                                        x, y, c, ev, x, y, c, av);
                         throw std::runtime_error(s);
                     }
                 }
             }
         }
     } catch (const std::exception& e) {
-        fmt::print("Error: {}\n", e.what());
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }

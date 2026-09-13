@@ -131,24 +131,39 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
 
 {
     try {
-        const int width = 1024;
-        const int height = 768;
-        const int depth = 3;
-        const std::vector<int32_t> extents{width, height, depth};
-        const std::vector<int32_t> tableSize{9};
+        constexpr int width{1024};
+        constexpr int height{768};
+        constexpr int depth{3};
+        const std::vector<int> extents{width, height, depth};
+        const std::vector<int> tableSize{9};
         const T border_value = mk_rand_scalar<T>();
         const int32_t border_type = 1; // 0 or 1
-        auto transform = mk_rand_buffer<double>(tableSize);
+        // NOTE: transform must stay near identity. Full-range random
+        // doubles cast to float become inf/NaN, producing garbage src
+        // coords that violate unsafe_promise_clamped in the generator
+        // and cause 2GB+ OOB reads on GPU (compute-sanitizer:
+        // Invalid __global__ read in _kernel_sum_s1cs).
+        auto transform = mk_null_buffer<double>(tableSize);
+        transform(0) = 1.0;
+        transform(1) = 0.0;
+        transform(2) = 0.0;
+        transform(3) = 0.0;
+        transform(4) = 1.0;
+        transform(5) = 0.0;
+        transform(6) = 0.0;
+        transform(7) = 0.0;
+        transform(8) = 1.0;
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
         input.set_host_dirty();
+        transform.set_host_dirty();
 
         const auto &result = benchmark([&]() {
             func(input, border_value, transform, output);
             output.device_sync(); });
 
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
 
         auto expect = mk_null_buffer<T>(extents);
         expect = BC_ref(expect, input, width, height, depth, border_value, border_type, transform);
@@ -160,18 +175,22 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
             for (int y=0; y<height; ++y) {
                 for (int x=0; x<width; ++x) {
                     if (expect(x, y, c) != output(x, y, c)) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
-                                                        x, y, c, expect(x, y, c), x, y, c, output(x, y, c)).c_str());
+                        const auto s =
+                            fmt::format("Error: expect({}, {}, {}) = {}, "
+                                        "actual({}, {}, {}) = {}\n",
+                                        x, y, c, expect(x, y, c),
+                                        x, y, c, output(x, y, c));
+                        throw std::runtime_error(s);
                     }
                 }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
