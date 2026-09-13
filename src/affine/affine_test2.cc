@@ -1,18 +1,24 @@
+#include <cstdlib>
+#include <string>
+
 #include "affine.h"
 
-#include "HalideBuffer.h"
-#include "halide_image_io.h"
 #include "halide_benchmark.h"
-#include <string>
-#include <cstdio>
-#include <iostream>
+#include "halide_image_io.h"
+
+#include "test_common.h"
 
 using namespace Halide::Tools;
 
 int main(int argc, char **argv) {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
     if (argc < 8) {
-        printf("Usage: affine_test2 input.png degrees scale_x scale_y shift_x shift_y skew_y\n");
-        printf("ex)    affine_test2 input.png 30 1 1 10 30 30\n");
+        fmt::print("Usage: affine_test2 input.png degrees scale_x scale_y shift_x shift_y skew_y\n");
+        fmt::print("ex)    affine_test2 input.png 30 1 1 10 30 30\n");
         return 1;
     }
 
@@ -27,10 +33,15 @@ int main(int argc, char **argv) {
     Halide::Runtime::Buffer<uint8_t> input = Halide::Tools::load_image(in_fname.c_str());
     Halide::Runtime::Buffer<uint8_t> output(input.width(), input.height(), input.channels());
 
+    input.set_host_dirty();
+
     const auto &result = benchmark([&]() {
         affine(input, degrees, scale_x, scale_y,
-               shift_x, shift_y, skew_y, output); });
-    std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+               shift_x, shift_y, skew_y, output);
+        output.device_sync(); });
+    fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+    output.copy_to_host();
 
     Halide::Tools::save_image(output, "affine.png");
 
