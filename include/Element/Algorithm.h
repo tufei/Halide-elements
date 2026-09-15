@@ -11,22 +11,27 @@
 
 namespace Halide {
 namespace Element {
-
 namespace {
-Expr ConstU32(int32_t v)
-{
-    return Halide::Internal::make_const(UInt(32), static_cast<uint32_t>(v));
-}
 
 Expr bit_reverse(Expr i, const int n)
 {
-    Expr ri = cast<uint32_t>(i);
-    ri = (ri & ConstU32(0x55555555)) <<  1 | (ri & ConstU32(0xAAAAAAAA)) >>  1;
-    ri = (ri & ConstU32(0x33333333)) <<  2 | (ri & ConstU32(0xCCCCCCCC)) >>  2;
-    ri = (ri & ConstU32(0x0F0F0F0F)) <<  4 | (ri & ConstU32(0xF0F0F0F0)) >>  4;
-    ri = (ri & ConstU32(0x00FF00FF)) <<  8 | (ri & ConstU32(0xFF00FF00)) >>  8;
-    ri = (ri & ConstU32(0x0000FFFF)) << 16 | (ri & ConstU32(0xFFFF0000)) >> 16;
-    ri = cast<int32_t>(ri >> (32 - log2(n)));
+    // Reverse the low log2(n) bits of i using arithmetic ops only.
+    // NOTE: a shift-based formulation (<<, >>, &, |) defeats Halide's
+    // bounds analysis in this Halide version: shifted indices stay
+    // unbounded through clamp-based wrappers such as
+    // BoundaryConditions::repeat_edge, so lowering fails with
+    // "accessed over an unbounded domain" even under
+    // unsafe_promise_clamped. %, /, *, + keep bounds precise.
+    int bits = 0;
+    for (int t = n; t > 1; t >>= 1) {
+        ++bits;
+    }
+    Expr ri = 0;
+    for (int j = 0; j < bits; ++j) {
+        const int pw_j = 1 << j;
+        const int pw_b = 1 << (bits - 1 - j);
+        ri = ri + ((i / pw_j) % 2) * pw_b;
+    }
     return ri;
 }
 
