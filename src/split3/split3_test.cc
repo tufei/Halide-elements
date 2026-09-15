@@ -24,11 +24,11 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
                      struct halide_buffer_t *_dst_buffer2))
 {
     try {
-        constexpr unsigned int N = 3;
-        const int width = 1024;
-        const int height = 768;
-        const std::vector<int32_t> in_extents{width, height, N};
-        const std::vector<int32_t> out_extents{width, height};
+        constexpr int N{3};
+        constexpr int width{1024};
+        constexpr int height{768};
+        const std::vector<int> in_extents{width, height, N};
+        const std::vector<int> out_extents{width, height};
         auto input = mk_null_buffer<T>(in_extents);
         Halide::Runtime::Buffer<T> output[N];
         for (int i = 0; i < N; ++i) {
@@ -46,33 +46,50 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
             }
         }
 
-        const auto &result = benchmark([&]() {
-            func(input, output[0], output[1], output[2]); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input.set_host_dirty();
+        for (int i = 0; i < N; ++i) {
+            output[i].set_host_dirty();
+        }
+
+        const auto result = benchmark([&]() {
+            func(input, output[0], output[1], output[2]);
+            output[0].device_sync();
+            output[1].device_sync();
+            output[2].device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        for (int i = 0; i < N; ++i) {
+            output[i].copy_to_host();
+        }
 
         for (int y=0; y<height; ++y) {
             for (int x=0; x<width; ++x) {
                 for (int c = 0; c < N; c++) {
                     T actual = output[c](x, y);
                     if (expect[x][y][c] != actual) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %u, actual(%d, %d, %d) = %u",
-                                                        x, y, c, expect[x][y][c], x, y, c, actual).c_str());
-                     }
+                        throw std::runtime_error(fmt::format("Error: expect({}, {}, {}) = {}, actual({}, {}, {}) = {}",
+                                                             x, y, c, expect[x][y][c], x, y, c, actual));
+                    }
                 }
             }
         }
         delete[] tmp;
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
 #ifdef TYPE_u8
     test<uint8_t>(split3_u8);
 #endif

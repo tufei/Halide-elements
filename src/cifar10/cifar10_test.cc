@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -19,7 +18,7 @@ Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
 {
     std::ifstream ifs(fname.c_str(), std::ios_base::binary);
     if (!ifs.is_open()) {
-        throw std::runtime_error(format("File not found : %s", fname.c_str()).c_str());
+        throw std::runtime_error(fmt::format("File not found : {}", fname));
     }
 
     uint32_t dim;
@@ -79,6 +78,10 @@ double accuracy(const Buffer<float>& probs, const Buffer<int64_t>& labels)
 }
 
 int main(int argc, char **argv) {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
     try {
         Buffer<int32_t> in = load_data<int32_t>("data/test_data1.bin");
 
@@ -87,19 +90,23 @@ int main(int argc, char **argv) {
 
         Buffer<float> out(classes, batch_size);
 
-        const auto &result = benchmark([&]() {
-            cifar10(in, out); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        in.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            cifar10(in, out);
+            out.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
 
         Buffer<int64_t> labels = load_data<int64_t>("data/test_label.bin");
+        out.copy_to_host();
 
         double acc = accuracy(out, labels);
-        std::cout << "Accurary: " << 100*acc << "%" << std::endl;;
+        fmt::print("Accurary: {}%\n", 100*acc);
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }

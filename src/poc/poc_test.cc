@@ -19,19 +19,24 @@ using std::vector;
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
     try {
         int ret = 0;
 
         //
         // Run
         //
-        const int n = 16;
+        constexpr int n{16};
         Buffer<float> input1 = mk_rand_real_buffer<float>({n, n}, 0.0f, 1.0f);
         Buffer<float> input2(n, n);
         Buffer<float> output(n, n);
 
-        const int shift_x = 3;
-        const int shift_y = 4;
+        constexpr int shift_x{3};
+        constexpr int shift_y{4};
 
         for (int y=0; y<n; ++y) {
             for (int x=0; x<n; ++x) {
@@ -44,9 +49,15 @@ int main()
             }
         }
 
-        const auto &result = benchmark([&]() {
-            poc(input1, input2, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input1.set_host_dirty();
+        input2.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            poc(input1, input2, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         int max_x = 0;
         int max_y = 0;
@@ -62,16 +73,16 @@ int main()
         }
 
         if (shift_x != max_x || shift_y != max_y) {
-            throw std::runtime_error(format("Error: expect(%d, %d), actual(%d, %d)",
-                                            shift_x, shift_y, max_x, max_y));
+            throw std::runtime_error(fmt::format("Error: expect({}, {}), actual({}, {})",
+                                                 shift_x, shift_y, max_x, max_y));
         }
 
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 

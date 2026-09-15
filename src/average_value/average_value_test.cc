@@ -1,5 +1,4 @@
 #include <cstdlib>
-#include <iostream>
 #include <string>
 #include <exception>
 
@@ -8,13 +7,8 @@
 #include "average_value_u8_f64.h"
 #include "average_value_u16_f64.h"
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
 #include "halide_benchmark.h"
 #include "test_common.h"
-
-using std::string;
-using std::vector;
 
 using namespace Halide::Tools;
 
@@ -24,20 +18,26 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
                     struct halide_buffer_t *_dst_buffer))
 {
     try{
-        const int32_t width = 1024;
-        const int32_t height = 768;
-        const int32_t depth = 3;
+        constexpr int width{1024};
+        constexpr int height{768};
+        constexpr int depth{3};
 
-        std::vector<int32_t> extents{width, height};
+        std::vector<int> extents{width, height};
         auto roi = mk_rand_buffer<uint8_t>(extents);
 
         extents.push_back(depth);
         auto input = mk_rand_buffer<S>(extents);
         auto output = mk_null_buffer<D>({1, depth});
 
-        const auto &result = benchmark([&]() {
-            func(input, roi, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input.set_host_dirty();
+        roi.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            func(input, roi, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         //reference
         D expect;
@@ -58,20 +58,25 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
 
             D actual = output(0, c);
             if (expect != actual){
-                throw std::runtime_error(format("Error: channel %d expect = %f, actual = %f\n",
-                                                c, expect, actual));
+                throw std::runtime_error(fmt::format("Error at channel {}: expect = {}, actual = {}",
+                                                     c, expect, actual));
             }
         }
     } catch (const std::exception& e){
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main(){
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
     #ifdef TYPE_u8_f32
         test<uint8_t, float>(average_value_u8_f32);
     #endif

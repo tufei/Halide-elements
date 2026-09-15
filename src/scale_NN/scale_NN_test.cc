@@ -46,20 +46,25 @@ template <typename T>
 int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t *_dst_buffer))
 {
     try {
-        const int32_t depth = 3;
-        const int32_t in_width = 1024;
-        const int32_t in_height = 768;
-        const std::vector<int32_t> in_extents{in_width, in_height, depth};
+        constexpr int32_t depth = 3;
+        constexpr int32_t in_width = 1024;
+        constexpr int32_t in_height = 768;
+        const std::vector<int> in_extents{in_width, in_height, depth};
 
-        const int32_t out_width = 500;
-        const int32_t out_height = 500;
-        const std::vector<int32_t> out_extents{out_width, out_height, depth};
+        constexpr int32_t out_width = 500;
+        constexpr int32_t out_height = 500;
+        const std::vector<int> out_extents{out_width, out_height, depth};
         auto input = mk_rand_buffer<T>(in_extents);
         auto output = mk_null_buffer<T>(out_extents);
 
-        const auto &result = benchmark([&]() {
-            func(input, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            func(input, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         auto expect = mk_null_buffer<T>(out_extents);
 
@@ -70,24 +75,28 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
                 for (int x=0; x<out_width; ++x) {
                     T actual = output(x, y, c);
                     if (abs(expect(x,y,c) - actual) > 0) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
-                                                        x, y, c, expect(x, y, c), x, y, c, actual).c_str());
+                        throw std::runtime_error(fmt::format("Error: expect({}, {}, {}) = {}, actual({}, {}, {}) = {}",
+                                                        x, y, c, expect(x, y, c), x, y, c, actual));
                     }
                 }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
 #ifdef TYPE_u8
     test<uint8_t>(scale_NN_u8);
 #endif

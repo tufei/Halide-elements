@@ -1,12 +1,9 @@
 #include <climits>
 #include <cmath>
 #include <cstdlib>
-#include <iostream>
 #include <string>
 #include <exception>
 
-#include "HalideRuntime.h"
-#include "HalideBuffer.h"
 #include "halide_benchmark.h"
 
 #include "average_u8.h"
@@ -23,38 +20,38 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
     try {
         using upper_t = typename Halide::Element::Upper<T>::type;
 
-        int ret = 0;
-
-        //
-        // Run
-        //
-        const int32_t width = 1024;
-        const int32_t height = 768;
-        const int32_t depth = 3;
-        const int32_t window_width = 3;
-        const int32_t window_height = 3;
-        const std::vector<int32_t> extents{width, height, depth};
+        constexpr int width{1024};
+        constexpr int height{768};
+        constexpr int depth{3};
+        constexpr int window_width{3};
+        constexpr int window_height{3};
+        const std::vector<int> extents{width, height, depth};
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        const auto &result = benchmark([&]() {
-            func(input, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input.set_host_dirty();
 
-        const int32_t wx_lower = -window_width / 2;
-        const int32_t wx_upper = wx_lower + window_width;
-        const int32_t wy_lower = -window_height / 2;
-        const int32_t wy_upper = wy_lower + window_height;
-        const int32_t window_area = window_width * window_height;
+        const auto result = benchmark([&]() {
+            func(input, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
 
-        for (int32_t c = 0; c < depth; ++c) {
-            for (int32_t y = 0; y < height; ++y) {
-                for (int32_t x = 0; x < width; ++x) {
-                    int32_t ax, ay;
+        output.copy_to_host();
+
+        const int wx_lower = -window_width / 2;
+        const int wx_upper = wx_lower + window_width;
+        const int wy_lower = -window_height / 2;
+        const int wy_upper = wy_lower + window_height;
+        const int window_area = window_width * window_height;
+
+        for (int c = 0; c < depth; ++c) {
+            for (int y = 0; y < height; ++y) {
+                for (int x = 0; x < width; ++x) {
+                    int ax, ay;
                     upper_t f = 0;
 
-                    for (int32_t wy = wy_lower; wy < wy_upper; wy++) {
-                        for (int32_t wx = wx_lower; wx < wx_upper; wx++) {
+                    for (int wy = wy_lower; wy < wy_upper; wy++) {
+                        for (int wx = wx_lower; wx < wx_upper; wx++) {
                             ax = x + wx;
                             ay = y + wy;
 
@@ -72,22 +69,28 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
                     T actual = output(x, y, c);
 
                     if (expect != actual) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d", x, y, c, expect, x, y, c, actual).c_str());
+                        throw std::runtime_error(fmt::format("Error at ({}, {}, {}): expect={}, actual={}",
+                                                             x, y, c, expect, actual));
                     }
                 }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
 #ifdef TYPE_u8
     test<uint8_t>(average_u8);
 #endif

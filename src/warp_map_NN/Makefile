@@ -1,4 +1,6 @@
 PROG:=warp_map_NN
 TYPE_LIST:=u8 u16
-AUTO_SCHEDULE:=false
+AUTO_SCHEDULE:=true
+AUTO_SCHEDULER:=Anderson2021
+TARGET:=host-cuda
 include ../../common.mk

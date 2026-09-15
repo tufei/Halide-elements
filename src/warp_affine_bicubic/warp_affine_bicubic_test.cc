@@ -134,13 +134,21 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
         const std::vector<int32_t> tableSize{6};
         const T border_value = mk_rand_scalar<T>();
         const int32_t border_type = 0; // 0 or 1
-        auto transform = mk_rand_buffer<double>(tableSize);
+        auto transform = mk_null_buffer<double>(tableSize);
+        transform(0) = 1.0; transform(1) = 0.0; transform(2) = 0.0;
+        transform(3) = 0.0; transform(4) = 1.0; transform(5) = 0.0;
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        const auto &result = benchmark([&]() {
-            func(input, border_value, transform, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input.set_host_dirty();
+        transform.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            func(input, border_value, transform, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         auto expect = mk_null_buffer<T>(extents);
         expect = BC_ref(expect, input, width, height, depth, border_value, border_type, transform);
@@ -150,27 +158,32 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
             for (int y=0; y<height; ++y) {
                 for (int x=0; x<width; ++x) {
                     if (expect(x, y, c) != output(x, y, c)) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
-                                                        x, y, c, expect(x, y, c), x, y, c, output(x, y, c)).c_str());
+                        throw std::runtime_error(
+                            fmt::format("Error: expect({}, {}, {}) = {}, actual({}, {}, {}) = {}",
+                                       x, y, c, expect(x, y, c), x, y, c, output(x, y, c)));
                     }
                 }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main(int argc, char **argv) {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
 #ifdef TYPE_u8
-    test<uint8_t>(warp_affine_bicubic_u8);
+    if (test<uint8_t>(warp_affine_bicubic_u8)) return 1;
 #endif
 #ifdef TYPE_u16
-    test<uint16_t>(warp_affine_bicubic_u16);
+    if (test<uint16_t>(warp_affine_bicubic_u16)) return 1;
 #endif
-
+    return 0;
 }

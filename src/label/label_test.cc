@@ -190,8 +190,8 @@ int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
         bool printbuff = false;
         bool printtime = false;
 
-        const int32_t width = 1024;
-        const int32_t height = 768;
+        constexpr int width{1024};
+        constexpr int height{768};
         const std::vector<int32_t> extents{width, height};
         auto input = mk_rand_buffer<T>(extents);
         Halide::Runtime::Buffer<uint32_t> pass1[2];
@@ -208,14 +208,19 @@ int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
                 }
             }
         }
+        input.set_host_dirty();
 
         auto expect = mk_null_buffer<uint32_t>(extents);
         expect = label_ref(expect, input, width, height);
 
         auto halide1_s = std::chrono::high_resolution_clock::now();
-        const auto &result0 = benchmark([&]() {
-            first_pass(input, pass1[0], pass1[1]); });
-        std::cout << "Execution time 1st pass: " << double(result0) * 1e3 << "ms\n";
+        const auto result0 = benchmark([&]() {
+            first_pass(input, pass1[0], pass1[1]);
+            pass1[0].device_sync();
+            pass1[1].device_sync(); });
+        fmt::print("Execution time 1st pass: {} ms\n", double(result0) * 1e3);
+        pass1[0].copy_to_host();
+        pass1[1].copy_to_host();
         auto halide1_e = std::chrono::high_resolution_clock::now();
 
         auto non_halide_s = std::chrono::high_resolution_clock::now();
@@ -225,63 +230,62 @@ int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
         int32_t bufWidth = buf.width();
 
         auto halide2_s = std::chrono::high_resolution_clock::now();
-        const auto &result1 = benchmark([&]() {
-            second_pass(pass1[0], buf, bufWidth, output); });
-        std::cout << "Execution time 2nd pass: " << double(result1) * 1e3 << "ms\n";
+        const auto result1 = benchmark([&]() {
+            second_pass(pass1[0], buf, bufWidth, output);
+            output.device_sync(); });
+        fmt::print("Execution time 2nd pass: {} ms\n", double(result1) * 1e3);
         auto halide2_e = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double> dth1 = halide1_e - halide1_s;
         std::chrono::duration<double> dtn = non_halide_e - non_halide_s;
         std::chrono::duration<double> dth2 = halide2_e - halide2_s;
-        //print to test
 
         if(printtime==true){
-            printf("\nsize of bffer is %d:::for each, Halide part1:%fs, non-Halide part:%fs, Halide part2:%fs\n",
-                   bufWidth, dth1.count(), dtn.count(), dth2.count());
-
+            fmt::print("\nsize of bffer is {}:::for each, Halide part1:{}s, non-Halide part:{}s, Halide part2:{}s\n",
+                       bufWidth, dth1.count(), dtn.count(), dth2.count());
         }
         if(printbuff == true){
-                printf("\ninput\n");
+                fmt::print("\ninput\n");
                 for (int i=0; i<height; ++i) {
                     for (int j=0; j<width; ++j) {
                                 if(input(j,i)==0)
-                                printf("    .");
+                                fmt::print("    .");
                                 else
-                                printf("%5d", input(j, i));
+                                fmt::print("{:5d}", input(j, i));
                             }
-                            printf("\n");
+                            fmt::print("\n");
                         }
 
-                printf("\npass1[0]\n");
+                fmt::print("\npass1[0]\n");
                 for (int i=0; i<height; ++i) {
                     for (int j=0; j<width; ++j) {
                                 if(pass1[0](j,i)==0)
-                                printf("    .");
+                                fmt::print("    .");
                                 else
-                                printf("%5d", pass1[0](j, i));
+                                fmt::print("{:5d}", pass1[0](j, i));
                             }
-                            printf("\n");
+                            fmt::print("\n");
                         }
-            printf("\npass1[1]\n");
+            fmt::print("\npass1[1]\n");
                     for (int i=0; i<height; ++i) {
                         for (int j=0; j<width; ++j) {
                             if(pass1[1](j,i)==0)
-                            printf("    .");
+                            fmt::print("    .");
                             else
-                            printf("%5d", pass1[1](j, i));
+                            fmt::print("{:5d}", pass1[1](j, i));
                         }
-                        printf("\n");
+                        fmt::print("\n");
                     }
 
-                printf("\noutput\n");
+                fmt::print("\noutput\n");
                         for (int i=0; i<height; ++i) {
                             for (int j=0; j<width; ++j) {
                                 if(output(j,i)==0)
-                                printf("    .");
+                                fmt::print("    .");
                                 else
-                                printf("%5d", output(j, i));
+                                fmt::print("{:5d}", output(j, i));
                             }
-                            printf("\n");
+                            fmt::print("\n");
                         }
         }
 
@@ -289,23 +293,29 @@ int test(int (*first_pass)(struct halide_buffer_t *_src_buffer,
         for (int i=0; i<height; ++i) {
           for (int j=0; j<width; ++j) {
               if (abs(expect(j, i) - output(j, i)) > 0) {
-                  throw std::runtime_error(format("Error: expect(%d, %d) = %d, actual(%d, %d) = %d",
-                                              j, i, expect(j, i), j, i, output(j, i)));
+                  throw std::runtime_error(
+                      fmt::format("Error: expect({}, {}) = {}, actual({}, {}) = {}",
+                                  j, i, expect(j, i), j, i, output(j, i)));
               }
 
           }
         }
     } catch (const std::exception& e){
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
 #ifdef TYPE_u8
     test<uint8_t>(label_u8);
 #endif

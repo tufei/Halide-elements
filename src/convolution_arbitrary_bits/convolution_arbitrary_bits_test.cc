@@ -13,11 +13,15 @@ using namespace Halide::Tools;
 #define BORDER_INTERPOLATE(x, l) (x < 0 ? 0 : (x >= l ? l - 1 : x))
 
 int main(int argc, char **argv) {
-    try {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
 
-        const int width = 512;
-        const int height = 512;
-        const int depth = 3;
+    try {
+        constexpr int width = 512;
+        constexpr int height = 512;
+        constexpr int depth = 3;
         Buffer<uint8_t> input = mk_const_buffer<uint8_t>({width, height, depth}, 1);
 
         using fixed20_t = int32_t;
@@ -34,11 +38,17 @@ int main(int argc, char **argv) {
 
         Buffer<fixed20_t> kernel(reinterpret_cast<fixed20_t*>(kernel_data), 5, 5);
 
+        input.set_host_dirty();
+        kernel.set_host_dirty();
+
         Buffer<uint8_t> output(width, height, depth);
 
         const auto &result = benchmark([&]() {
-            convolution_arbitrary_bits(input, kernel, 3, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+            convolution_arbitrary_bits(input, kernel, 3, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
@@ -59,16 +69,20 @@ int main(int argc, char **argv) {
                     uint8_t ev = s >> frac_bits;
                     uint8_t av = output(x, y, c);
                     if (ev != av) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d", x, y, c, ev, x, y, c, av).c_str());
+                        const auto s2 =
+                            fmt::format("Error: expect({}, {}, {}) = {}, "
+                                        "actual({}, {}, {}) = {}",
+                                        x, y, c, ev, x, y, c, av);
+                        throw std::runtime_error(s2);
                     }
                 }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }

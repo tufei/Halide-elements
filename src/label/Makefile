@@ -2,6 +2,8 @@ PROG:=label
 ANOTHER:=second_pass
 TYPE_LIST:=u8 u16
 AUTO_SCHEDULE:=true
+AUTO_SCHEDULER:=Anderson2021
+TARGET:=host-cuda
 
 # Platform dependents
 UNAME_S := $(shell uname -s)

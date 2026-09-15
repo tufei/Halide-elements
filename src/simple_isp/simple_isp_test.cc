@@ -56,28 +56,38 @@ Buffer<uint16_t> fill_bayer_pattern(int width, int height)
 }
 
 int main(int argc, char **argv) {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
     try {
-        const int width = 3280;
-        const int height = 2486;
+        constexpr int width = 3280;
+        constexpr int height = 2486;
 
         Buffer<uint16_t> input = fill_bayer_pattern(width, height);
         Buffer<uint8_t> output(4, width, height);
+
+        input.set_host_dirty();
 
         const uint16_t optical_black_clamp_value = 16;
         const float gamma_value = 1.0f/1.8f;
         const float saturation_value = 0.6f;
 
-        const auto &result = benchmark([&]() {
+        const auto result = benchmark([&]() {
             simple_isp(input, optical_black_clamp_value, gamma_value,
-                       saturation_value, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+                       saturation_value, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         save_ppm("out.ppm", output);
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }

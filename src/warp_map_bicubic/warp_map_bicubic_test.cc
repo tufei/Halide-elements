@@ -135,10 +135,16 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
         auto input2 = mk_rand_buffer<float>(extents);
         auto output = mk_null_buffer<T>(extents_3d);
 
+        input0.set_host_dirty();
+        input1.set_host_dirty();
+        input2.set_host_dirty();
 
-        const auto &result = benchmark([&]() {
-            func(input0, input1, input2, border_type, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        const auto result = benchmark([&]() {
+            func(input0, input1, input2, border_type, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         auto expect = mk_null_buffer<T>(extents_3d);
         expect = warp_map_bicubic_ref(expect, input0, input1, input2, border_value, border_type, width, height, depth);
@@ -147,27 +153,33 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,
             for (int j=0; j<width; ++j) {
                 for (int i=0; i<height; ++i) {
                     if (abs(expect(j, i, c) - output(j, i, c)) > 1) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
-                                                    j, i, c, expect(j, i, c), j, i, c, output(j, i, c)));
+                        throw std::runtime_error(
+                            fmt::format("Error: expect({}, {}, {}) = {}, actual({}, {}, {}) = {}",
+                                       j, i, c, expect(j, i, c), j, i, c, output(j, i, c)));
                     }
                 }
             }
         }
     } catch (const std::exception& e){
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
 #ifdef TYPE_u8
-    test<uint8_t>(warp_map_bicubic_u8);
+    if (test<uint8_t>(warp_map_bicubic_u8)) return 1;
 #endif
 #ifdef TYPE_u16
-    test<uint16_t>(warp_map_bicubic_u16);
+    if (test<uint16_t>(warp_map_bicubic_u16)) return 1;
 #endif
+    return 0;
 }

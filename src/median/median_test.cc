@@ -22,16 +22,24 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
         //
         // Run
         //
-        const int width = 1024;
-        const int height = 768;
-        const int depth = 3;
-        const int window_width = 3;
-        const int window_height = 3;
-        const std::vector<int32_t> extents{width, height, depth};
+        constexpr int width{1024};
+        constexpr int height{768};
+        constexpr int depth{3};
+        constexpr int window_width{3};
+        constexpr int window_height{3};
+        const std::vector<int> extents{width, height, depth};
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        func(input, output);
+        input.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            func(input, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
+
         T *tmp = new T[depth * height * width];
         T (*expect)[height][width] = reinterpret_cast<T (*)[height][width]>(tmp);
 
@@ -56,33 +64,35 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer, struct halide_buffer_t
             }
         }
 
-        const auto &result = benchmark([&]() {
-            func(input, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
-
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
                 for (int x=0; x<width; ++x) {
                     T expect_ = expect[c][y][x];
                     T actual = output(x, y, c);
                     if (expect_ != actual) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d", x, y, c, expect_, x, y, c, actual).c_str());
+                        throw std::runtime_error(fmt::format("Error: expect({}, {}, {}) = {}, actual({}, {}, {}) = {}",
+                                                             x, y, c, expect_, x, y, c, actual));
                     }
                 }
             }
         }
         delete[] tmp;
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
 #ifdef TYPE_u8
     test<uint8_t>(median_u8);
 #endif

@@ -37,19 +37,24 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
                      struct halide_buffer_t *_dst_buffer))
 {
     try {
-        const int width = 1024;
-        const int height = 768;
-        const int depth = 3;
-        const std::vector<int32_t> extents{width, height, depth};
+        constexpr int width{1024};
+        constexpr int height{768};
+        constexpr int depth{3};
+        const std::vector<int> extents{width, height, depth};
 
         const T threshold = mk_rand_scalar<T>();
         const T value = mk_rand_scalar<T>();
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<T>(extents);
 
-        const auto &result = benchmark([&]() {
-            func(input, threshold, value, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            func(input, threshold, value, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         auto expect = mk_rand_buffer<T>(extents);
         expect = bin_inv_ref(expect, input, width, height, depth, threshold, value);
@@ -59,23 +64,27 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer,
                 for (int x=0; x<width; ++x) {
                     T actual = output(x, y, c);
                     if (expect(x, y, c) != actual) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
-                                                     x, y, c, expect(x, y, c), x, y, c, actual).c_str());
-                     }
-
+                        throw std::runtime_error(
+                            fmt::format("Error: expect({}, {}, {}) = {}, actual({}, {}, {}) = {}",
+                                        x, y, c, expect(x, y, c), x, y, c, actual));
+                    }
                 }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
 #ifdef TYPE_u8
     test<uint8_t>(threshold_bin_inv_u8);
 #endif

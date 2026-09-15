@@ -54,9 +54,15 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_
             }
         }
 
-        const auto &result = benchmark([&]() {
-            func(input0, input1, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input0.set_host_dirty();
+        input1.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            func(input0, input1, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         for (int c=0; c<img_depth; ++c) {
             for (int y=0; y<res_height; ++y) {
@@ -71,29 +77,36 @@ int test(int (*func)(struct halide_buffer_t *_src0_buffer, struct halide_buffer_
 
                     double actual = output(x, y, c);
                     if (expect != actual) {
-                        throw std::runtime_error(format("Error0: expect(%d, %d, %d) = %f, actual(%d, %d, %d) = %f", x, y, c, expect, x, y, c, actual).c_str());
+                        throw std::runtime_error(
+                            fmt::format("Error0: expect({}, {}, {}) = {}, actual({}, {}, {}) = {}",
+                                       x, y, c, expect, x, y, c, actual));
                     }
                 }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
 #ifdef TYPE_u8
-    test<uint8_t>(tm_ssd_u8);
+    if (test<uint8_t>(tm_ssd_u8)) return 1;
 #endif
 #ifdef TYPE_u16
-    test<uint16_t>(tm_ssd_u16);
+    if (test<uint16_t>(tm_ssd_u16)) return 1;
 #endif
 #ifdef TYPE_u32
-    test<uint32_t>(tm_ssd_u32);
+    if (test<uint32_t>(tm_ssd_u32)) return 1;
 #endif
+    return 0;
 }

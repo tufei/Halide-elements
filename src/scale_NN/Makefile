@@ -1,4 +1,6 @@
 PROG=scale_NN
 TYPE_LIST=u8 u16 i16
 AUTO_SCHEDULE:=true
+AUTO_SCHEDULER:=Anderson2021
+TARGET:=host-cuda
 include ../../common.mk

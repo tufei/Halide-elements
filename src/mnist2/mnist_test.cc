@@ -19,7 +19,7 @@ Halide::Runtime::Buffer<Type> load_data(const std::string& fname)
 {
     std::ifstream ifs(fname.c_str(), std::ios_base::binary);
     if (!ifs.is_open()) {
-        throw std::runtime_error(format("File not found : %s", fname.c_str()).c_str());
+        throw std::runtime_error(fmt::format("File not found : {}", fname));
     }
 
     uint32_t dim;
@@ -81,7 +81,7 @@ double accuracy(const Buffer<float>& probs, const Buffer<int>& labels)
 template<typename T>
 void Verify(const Buffer<T>& actuals, const Buffer<T>& expects, T tolerance = 10e-3)
 {
-    std::cerr << actuals.number_of_elements() << " : " << expects.number_of_elements() << std::endl;
+    fmt::print("{} : {}\n", actuals.number_of_elements(), expects.number_of_elements());
     assert(actuals.number_of_elements() == expects.number_of_elements());
 
     for (size_t i = 0; i < actuals.number_of_elements(); i++) {
@@ -89,13 +89,19 @@ void Verify(const Buffer<T>& actuals, const Buffer<T>& expects, T tolerance = 10
         T expect = expects.data()[i];
         T error = std::fabs((actual - expect) / actual);
         if (error > tolerance) {
-            throw std::runtime_error(format("Error: expect(%d) = %f, actual(%d) = %f",
-                                            i, expect, i, actual).c_str());
+            throw std::runtime_error(fmt::format("Error: expect({}) = {}, actual({}) = {}",
+                                                 i, expect, i, actual));
         }
     }
 }
 
-int main(int argc, char **argv) {
+int main()
+{
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
     try {
         //Buffer<int32_t> in = load_data<int32_t>("data/test_data_b1.bin");
         Buffer<float> in = load_data<float>("data/mnist_input.bin");
@@ -106,10 +112,13 @@ int main(int argc, char **argv) {
         Buffer<float> out(classes, batch_size);
         // Buffer<float> out(20, 24, 24, batch_size);
 
-        const auto &result = benchmark([&]() {
-            mnist(in, out); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
-        mnist(in, out);
+        in.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            mnist(in, out);
+            out.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+        out.copy_to_host();
 
         Buffer<int> labels = load_data<int>("data/mnist_label.bin");
 
@@ -117,12 +126,12 @@ int main(int argc, char **argv) {
         // Verify(out, expects);
 
         double acc = accuracy(out, labels);
-        std::cout << "Accurary: " << acc << std::endl;;
+        fmt::print("Accurary: {}\n", acc);
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }

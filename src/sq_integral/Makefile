@@ -1,4 +1,6 @@
 PROG=sq_integral
 TYPE_LIST=u8_f32 u16_f32 u32_f32 u8_f64 u16_f64 u32_f64
 AUTO_SCHEDULE:=true
+AUTO_SCHEDULER:=Anderson2021
+TARGET:=host-cuda
 include ../../common.mk

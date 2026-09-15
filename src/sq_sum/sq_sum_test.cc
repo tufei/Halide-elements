@@ -24,23 +24,23 @@ template<typename T, typename D>
 int test(int (*func)(struct halide_buffer_t *_src_buffer0,  struct halide_buffer_t *_dst_buffer))
 {
     try {
-        int ret = 0;
-
-        //
-        // Run
-        //
-        const int width = 1024;
-        const int height = 768;
-        const int depth = 3;
-        const std::vector<int32_t> extents{width, height, depth};
+        constexpr int width{1024};
+        constexpr int height{768};
+        constexpr int depth{3};
+        const std::vector<int> extents{width, height, depth};
         auto input = mk_rand_buffer<T>(extents);
         auto output = mk_null_buffer<D>({1, 1, depth});
         D actual_total;
         D expect_total;
 
-        const auto &result = benchmark([&]() {
-            func(input, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        input.set_host_dirty();
+
+        const auto result = benchmark([&]() {
+            func(input, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         for (int c=0; c<depth; ++c) {
             double sum = 0.0;
@@ -54,20 +54,26 @@ int test(int (*func)(struct halide_buffer_t *_src_buffer0,  struct halide_buffer
             expect_total = static_cast<D>(sum);
 
             if (expect_total != actual_total) {
-                throw std::runtime_error(format("Error: expect_total = %f, actual_total = %f", expect_total, actual_total).c_str());
+                throw std::runtime_error(fmt::format("Error: expect_total = {}, actual_total = {}",
+                                                     expect_total, actual_total));
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Sucess!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main()
 {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
+
 #ifdef TYPE_u8_f32
     test<uint8_t, float>(sq_sum_u8_f32);
 #endif

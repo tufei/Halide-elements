@@ -19,38 +19,45 @@ using namespace Halide::Tools;
 template<typename T>
 int test(int (*func)(T _value, struct halide_buffer_t *_dst_buffer)) {
     try {
-        const int width = 1024;
-        const int height = 768;
-        const int depth = 3;
-        const std::vector<int32_t> extents{width, height, depth};
+        constexpr int width = 1024;
+        constexpr int height = 768;
+        constexpr int depth = 3;
+        const std::vector<int> extents{width, height, depth};
         const T value = mk_rand_scalar<T>(); //input scalar
         auto output = mk_null_buffer<T>(extents);
 
-        const auto &result = benchmark([&]() {
-            func(value, output); });
-        std::cout << "Execution time: " << double(result) * 1e3 << "ms\n";
+        const auto result = benchmark([&]() {
+            func(value, output);
+            output.device_sync(); });
+        fmt::print("Execution time: {} ms\n", double(result) * 1e3);
+
+        output.copy_to_host();
 
         //for each x and y
         for (int c=0; c<depth; ++c) {
             for (int y=0; y<height; ++y) {
                 for (int x=0; x<width; ++x) {
                     if (value != output(x, y, c)) {
-                        throw std::runtime_error(format("Error: expect(%d, %d, %d) = %d, actual(%d, %d, %d) = %d",
-                                                        x, y, c, value, x, y, c, output(x, y, c)).c_str());
+                        throw std::runtime_error(fmt::format("Error: expect({}, {}, {}) = {}, actual({}, {}, {}) = {}",
+                                                        x, y, c, value, x, y, c, output(x, y, c)));
                     }
                 }
             }
         }
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(stderr, "{}\n", e.what());
         return 1;
     }
 
-    printf("Success!\n");
+    fmt::print("Success!\n");
     return 0;
 }
 
 int main(int argc, char **argv) {
+#ifdef USE_CUDA
+    fmt::print("Checking CUDA...\n");
+    if (check_cuda_device()) return 0;
+#endif //~USE_CUDA
 #ifdef TYPE_u8
     test<uint8_t>(set_scalar_u8);
 #endif
